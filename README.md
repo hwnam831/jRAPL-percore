@@ -91,6 +91,9 @@ Known limitations
 
 Energy check only works for at most 2 sockets CPU.
 
+### TODO
+- change to per-core
+- Scala wrapper
 
 Contributions
 --------------------------------------------------------------
