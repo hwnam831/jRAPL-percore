@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <jni.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -7,7 +6,6 @@
 #include <stdint.h>
 #include <string.h>
 #include<inttypes.h>
-#include "CPUScaler.h"
 #include "arch_spec.h"
 #include "msr.h"
 
@@ -37,15 +35,15 @@ void copy_to_string(char *ener_info, char uncore_buffer[60], int uncore_num, cha
 }
 
 
-JNIEXPORT jint JNICALL Java_EnergyCheckUtils_ProfileInit(JNIEnv *env, jclass jcls) {
-	jintArray result;
+int ProfileInit() {
 	int i;
 	char msr_filename[BUFSIZ];
 
-	get_cpu_model();	
+	get_cpu_model();
+	printf("CPU model:%#02x\n",cpu_model);	
 	getSocketNum();
 
-	jint wraparound_energy;
+	int wraparound_energy;
 
 	/*only two domains are supported for parameters check*/
 	parameters = (rapl_msr_parameter *)malloc(2 * sizeof(rapl_msr_parameter));
@@ -66,10 +64,6 @@ JNIEXPORT jint JNICALL Java_EnergyCheckUtils_ProfileInit(JNIEnv *env, jclass jcl
 	wraparound_energy = (int)WRAPAROUND_VALUE;
 
 	return wraparound_energy;
-}
-
-JNIEXPORT jint JNICALL Java_EnergyCheckUtils_GetSocketNum(JNIEnv *env, jclass jcls) {
-	return (jint)getSocketNum();
 }
 
 #define MSR_DRAM_ENERGY_UNIT 0.000015
@@ -140,12 +134,12 @@ initialize_energy_info(char gpu_buffer[num_pkg][60], char dram_buffer[num_pkg][6
 
 		ener_info = (char *) malloc(info_size);
 	}
+	return info_size;
 }
 
 
-JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck(JNIEnv *env,
-		jclass jcls) {
-	jstring ener_string;
+jstring EnergyStatCheck() {
+
 	char gpu_buffer[num_pkg][60]; 
 	char dram_buffer[num_pkg][60]; 
 	char cpu_buffer[num_pkg][60]; 
@@ -154,8 +148,7 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck(JNIEnv *env,
 	int cpu_num = 0L;
 	int package_num = 0L;
 	int gpu_num = 0L;
-	//construct a string
-	//char *ener_info;
+	jstring ener_string;
 	int info_size;
 	int i;
 	int offset = 0;
@@ -233,16 +226,25 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck(JNIEnv *env,
 
 		}
 	}
-	//ener_info[info_size] = '\0';
+	ener_info[info_size-1] = '\0';
+	printf(ener_info);
 	ener_string = (*env)->NewStringUTF(env, ener_info);	
 	free(ener_info);
 	return ener_string;
 
 }
-JNIEXPORT void JNICALL Java_EnergyCheckUtils_ProfileDealloc
-   (JNIEnv * env, jclass jcls) {
+void ProfileDealloc() {
 	int i;
 	free(fd);	
 	free(parameters);
 }
 
+int main(int argc, char** argv){
+	int wrpe = ProfileInit();
+	printf("%d",wrpe);
+	printf("\n");
+	jstring stt;
+	stt = EnergyStatCheck();
+	ProfileDealloc();
+	return 0;
+}

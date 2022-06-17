@@ -14,6 +14,7 @@
 #define IVYBRIDGE            0x3AU
 #define SKYLAKE1             0x4EU
 #define SKYLAKE2             0x5EU
+#define SKYLAKEX             0x55U
 #define HASWELL1			 0x3CU
 #define HASWELL2			 0x45U
 #define HASWELL3			 0x46U

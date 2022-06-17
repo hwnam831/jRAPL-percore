@@ -1,30 +1,31 @@
 import java.lang.reflect.Field;
 public class EnergyCheckUtils {
-	public native static int scale(int freq);
-	public native static int[] freqAvailable();
+	//public native static int scale(int freq);
+	//public native static int[] freqAvailable();
 
-	public native static double[] GetPackagePowerSpec();
-	public native static double[] GetDramPowerSpec();
-	public native static void SetPackagePowerLimit(int socketId, int level, double costomPower);
-	public native static void SetPackageTimeWindowLimit(int socketId, int level, double costomTimeWin);
-	public native static void SetDramTimeWindowLimit(int socketId, int level, double costomTimeWin);
-	public native static void SetDramPowerLimit(int socketId, int level, double costomPower);
+	//public native static double[] GetPackagePowerSpec();
+	//public native static double[] GetDramPowerSpec();
+	//public native static void SetPackagePowerLimit(int socketId, int level, double costomPower);
+	//public native static void SetPackageTimeWindowLimit(int socketId, int level, double costomTimeWin);
+	//public native static void SetDramTimeWindowLimit(int socketId, int level, double costomTimeWin);
+	//public native static void SetDramPowerLimit(int socketId, int level, double costomPower);
 	public native static int ProfileInit();
 	public native static int GetSocketNum();
 	public native static String EnergyStatCheck();
 	public native static void ProfileDealloc();
-	public native static void SetPowerLimit(int ENABLE);
+	//public native static void SetPowerLimit(int ENABLE);
 	public static int wraparoundValue;
 
 	public static int socketNum;
 	static {
+		/* 
 		System.setProperty("java.library.path", System.getProperty("user.dir"));
 		try {
 			Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
 			fieldSysPath.setAccessible(true);
 			fieldSysPath.set(null, null);
 		} catch (Exception e) { }
-
+		*/
 		System.loadLibrary("CPUScaler");
 		wraparoundValue = ProfileInit();
 		socketNum = GetSocketNum();
