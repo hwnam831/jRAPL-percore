@@ -51,8 +51,8 @@ JNIEXPORT jint JNICALL Java_EnergyCheckUtils_ProfileInit(JNIEnv *env, jclass jcl
 	parameters = (rapl_msr_parameter *)malloc(2 * sizeof(rapl_msr_parameter));
 	fd = (int *) malloc(num_pkg_core*num_pkg * sizeof(int));
 
-	for(i = 0; i < coreNum; i+=num_core_thread) {
-		sprintf(msr_filename, "/dev/cpu/%d/msr", i);
+	for(i = 0; i < num_pkg_core*num_pkg; i++) {
+		sprintf(msr_filename, "/dev/cpu/%d/msr", i*num_core_thread);
 		fd[i] = open(msr_filename, O_RDWR);
 	}
 
@@ -94,7 +94,7 @@ initialize_energy_info(char gpu_buffer[num_pkg][60], char dram_buffer[num_pkg][6
 			dram[pkgnum] =(double)result*rapl_unit.energy;
 		}
 		sprintf(dram_buffer[pkgnum], "%f", dram[pkgnum]);
-		info_size += strlen(package_buffer[i]) + strlen(dram_buffer[i]) + 3;
+		info_size += strlen(package_buffer[pkgnum]) + strlen(dram_buffer[pkgnum]) + 3;
 		for(i=pkgnum*num_pkg_core; i<(pkgnum+1)*num_pkg_core; i++){
 			result = read_msr(fd[i], MSR_PP0_ENERGY_STATUS);
 			pp0[i] = (double) result * rapl_unit.energy;
@@ -136,7 +136,7 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck(JNIEnv *env,
 		dram_num = strlen(dram_buffer[pkgnum]);
 		package_num = strlen(package_buffer[pkgnum]);
 		cpu_num = 0;
-		memcpy(ener_info + offset, &dram_buffer[i], dram_num);
+		memcpy(ener_info + offset, &dram_buffer[pkgnum], dram_num);
 		//split sigh
 		ener_info[offset + dram_num] = '#';
 		int corenum = pkgnum*num_pkg_core;
@@ -148,13 +148,13 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck(JNIEnv *env,
 			cpu_num += strlen(cpu_buffer[i]);
 			ener_info[offset + dram_num + 1 + cpu_num + i] = '#';
 		}
-		if(pkgnum < num_pkg) {
-			memcpy(ener_info + offset + dram_num + cpu_num + 1 + num_pkg_core, &package_buffer[i], package_num);
+		if(pkgnum < num_pkg-1) {
+			memcpy(ener_info + offset + dram_num + cpu_num + 1 + num_pkg_core, &package_buffer[pkgnum], package_num);
 			offset += dram_num + cpu_num + package_num + 1 + num_pkg_core;
 			ener_info[offset] = '@';
 			offset++;
 		} else {
-			memcpy(ener_info + offset + dram_num + cpu_num + 1 + num_pkg_core, &package_buffer[i], package_num + 1);
+			memcpy(ener_info + offset + dram_num + cpu_num + 1 + num_pkg_core, &package_buffer[pkgnum], package_num + 1);
 		}
 	}
 

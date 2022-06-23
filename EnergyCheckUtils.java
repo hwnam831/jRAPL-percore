@@ -44,13 +44,12 @@ public class EnergyCheckUtils {
 		System.out.println(EnergyInfo);
 		/*One Socket*/
 		if(socketNum == 1) {
-			double[] stats = new double[3];
+			
 			String[] energy = EnergyInfo.split("#");
-
-			stats[0] = Double.parseDouble(energy[0]);
-			stats[1] = Double.parseDouble(energy[1]);
-			stats[2] = Double.parseDouble(energy[2]);
-
+			double[] stats = new double[energy.length];
+			for(int j=0; j<energy.length; j++){
+				stats[j] = Double.parseDouble(energy[j]);
+			}
 			return stats;
 
 		} else {
@@ -76,13 +75,16 @@ public class EnergyCheckUtils {
 
 		double[] before = getEnergyStats();
 		try {
-			Thread.sleep(10000);
+			Thread.sleep(1000);
 		} catch(Exception e) {
 		}
 		double[] after = getEnergyStats();
-		for(int i = 0; i < socketNum; i++) {
-			System.out.println("Power consumption of dram: " + (after[0] - before[0]) / 10.0 + " power consumption of cpu: " + (after[1] - before[1]) / 10.0 + " power consumption of package: " + (after[2] - before[2]) / 10.0);
+		int corenum = after.length-2;
+		System.out.println("Power consumption of dram: " + (after[0] - before[0]));
+		for(int i = 1; i < corenum+1; i++) {
+			System.out.println("power consumption of cpu: " + i + ": " + (after[1] - before[1]));
 		}
+		System.out.println("Power consumption of pakcage: " + (after[corenum+1] - before[corenum+1]));
 		ProfileDealloc();
 	}
 }
