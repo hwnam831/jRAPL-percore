@@ -110,6 +110,7 @@ initialize_energy_info(char gpu_buffer[num_pkg][60], char dram_buffer[num_pkg][6
 			case SKYLAKEX:
 			case BROADWELL:
 			case BROADWELL2:
+			case CLOUDLAB:
 	
 				result = read_msr(fd[i],MSR_DRAM_ENERGY_STATUS);
 				if (cpu_model == BROADWELL || cpu_model == BROADWELL2) {
@@ -176,6 +177,7 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck(JNIEnv *env,
 			case SKYLAKEX:
 			case BROADWELL:
 			case BROADWELL2:
+			case CLOUDLAB:
 
 				//copy_to_string(ener_info, dram_buffer, dram_num, cpu_buffer, cpu_num, package_buffer, package_num, i, &offset);
 				/*Insert socket number*/	

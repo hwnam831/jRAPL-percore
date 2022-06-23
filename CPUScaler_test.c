@@ -104,6 +104,7 @@ initialize_energy_info(char gpu_buffer[num_pkg][60], char dram_buffer[num_pkg][6
 			case SKYLAKEX:
 			case BROADWELL:
 			case BROADWELL2:
+			case CLOUDLAB:
 	
 				result = read_msr(fd[i],MSR_DRAM_ENERGY_STATUS);
 				if (cpu_model == BROADWELL || cpu_model == BROADWELL2) {
@@ -138,7 +139,7 @@ initialize_energy_info(char gpu_buffer[num_pkg][60], char dram_buffer[num_pkg][6
 }
 
 
-jstring EnergyStatCheck() {
+void EnergyStatCheck() {
 
 	char gpu_buffer[num_pkg][60]; 
 	char dram_buffer[num_pkg][60]; 
@@ -169,6 +170,7 @@ jstring EnergyStatCheck() {
 			case SKYLAKEX:
 			case BROADWELL:
 			case BROADWELL2:
+			case CLOUDLAB:
 
 				//copy_to_string(ener_info, dram_buffer, dram_num, cpu_buffer, cpu_num, package_buffer, package_num, i, &offset);
 				/*Insert socket number*/	
@@ -228,9 +230,9 @@ jstring EnergyStatCheck() {
 	}
 	ener_info[info_size-1] = '\0';
 	printf(ener_info);
-	ener_string = (*env)->NewStringUTF(env, ener_info);	
+//	ener_string = (*env)->NewStringUTF(env, ener_info);	
 	free(ener_info);
-	return ener_string;
+//	return ener_string;
 
 }
 void ProfileDealloc() {
@@ -243,8 +245,8 @@ int main(int argc, char** argv){
 	int wrpe = ProfileInit();
 	printf("%d",wrpe);
 	printf("\n");
-	jstring stt;
-	stt = EnergyStatCheck();
+
+	EnergyStatCheck();
 	ProfileDealloc();
 	return 0;
 }
