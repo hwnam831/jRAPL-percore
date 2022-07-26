@@ -11,6 +11,14 @@ public class EnergyCheckUtils {
 	//public native static void SetDramPowerLimit(int socketId, int level, double costomPower);
 	public native static int ProfileInit();
 	public native static int GetSocketNum();
+	public native static double GetPkgEnergy(int socketid);
+	// If disabled, powerlimit is set to -1
+	// limit1: TDP (don't change) limit2: short-term (7.8ms)
+	// 0: powerlimit1, 1: timewindow1, 2: powerlimit2, 3: timewindow2
+	public native static double[] GetPkgLimit(int socketid);
+	// Set the short-term limit (powerlimit2)
+	public native static void SetPkgLimit(int socketid, double limit);
+	public native static double GetDramEnergy(int socketid);
 	public native static String EnergyStatCheck();
 	public native static void ProfileDealloc();
 	//public native static void SetPowerLimit(int ENABLE);
@@ -73,18 +81,34 @@ public class EnergyCheckUtils {
 
 	public static void main(String[] args) {
 
-		double[] before = getEnergyStats();
-		try {
-			Thread.sleep(1000);
-		} catch(Exception e) {
+		int sampleperiod = 10;
+		int epochs  = 100;
+		if (args.length > 2){
+			sampleperiod = Integer.parseInt(args[1]);
 		}
-		double[] after = getEnergyStats();
-		int corenum = after.length-2;
-		System.out.println("Power consumption of dram: " + (after[0] - before[0]));
-		for(int i = 1; i < corenum+1; i++) {
-			System.out.println("power consumption of cpu: " + i + ": " + (after[1] - before[1]));
+		double scale = 1000.0/(double)sampleperiod;
+		double pkgbefore, drambefore;
+		double pkgafter, dramafter;
+		pkgbefore = GetPkgEnergy(0)*scale;
+		drambefore = GetDramEnergy(0)*scale;
+		double[] limitinfo = GetPkgLimit(0);
+		long curtimems;
+		System.out.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
+		System.out.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
+		for (int epc = 0; epc < epochs; epc++){
+			try {
+				Thread.sleep(sampleperiod);
+			} catch(Exception e) {
+			}
+			
+			pkgafter = GetPkgEnergy(0)*scale;
+			dramafter = GetDramEnergy(0)*scale;
+			curtimems = java.lang.System.currentTimeMillis();
+			System.out.println(""+curtimems + "," + (dramafter - drambefore) + "," +(pkgafter - pkgbefore));
+			pkgbefore = pkgafter;
+			drambefore = dramafter;
 		}
-		System.out.println("Power consumption of pakcage: " + (after[corenum+1] - before[corenum+1]));
 		ProfileDealloc();
 	}
 }

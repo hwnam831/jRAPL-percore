@@ -170,3 +170,61 @@ JNIEXPORT void JNICALL Java_EnergyCheckUtils_ProfileDealloc
 	free(parameters);
 }
 
+uint64_t getRAPLInfo(int socketid, unsigned int addr){
+	if (socketid >= getSocketNum()){
+		fprintf(stderr, "ERROR: invalid socket number %d. Max socket %d\n",socketid, getSocketNum());
+		return 0;
+	}
+	uint64_t info = read_msr(fd[socketid*num_pkg_core], addr);	//First 32 bits so don't need shift bits.
+	return info;
+}
+
+JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetPkgEnergy(JNIEnv *env,
+		jclass jcls, jint socketid) {
+	double rawresult = getRAPLInfo(socketid, MSR_PKG_ENERGY_STATUS);
+	return (jdouble) rawresult * rapl_unit.energy;
+}
+
+JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
+(JNIEnv *env, jclass jcls, jint socketid){
+	double limitinfo[4]; 
+	uint64_t rawresult = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
+	uint32_t tw_Y = extractBitField(rawresult, 5, 17);
+	uint32_t tw_Z = extractBitField(rawresult, 2, 22);
+	uint32_t enabled = extractBitField(rawresult, 1, 15);
+	
+	uint32_t pl_raw = extractBitField(rawresult, 15, 0);
+	double timewindow = (1 << tw_Y) * (1.0 + tw_Z/4.0) * rapl_unit.time;
+	double powerval = enabled ? pl_raw*rapl_unit.power : -1;
+	limitinfo[0] = powerval;
+	limitinfo[1] = timewindow;
+
+	tw_Y = extractBitField(rawresult, 5, 49);
+	tw_Z = extractBitField(rawresult, 2, 54);
+	enabled = extractBitField(rawresult, 1, 47);
+
+	pl_raw = extractBitField(rawresult, 15, 32);
+	timewindow = (1 << tw_Y) * (1.0 + tw_Z/4.0) * rapl_unit.time;
+	powerval = enabled ? pl_raw*rapl_unit.power : -1;
+	limitinfo[2] = powerval;
+	limitinfo[3] = timewindow;
+
+	jdoubleArray result = (*env)->NewDoubleArray(env, 4);
+	(*env)->SetDoubleArrayRegion(env, result, 0, 4, limitinfo);
+	return result;
+
+  }
+
+JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_SetPkgLimit
+(JNIEnv *env, jclass jcls, jint socketid, jdouble limit){
+	uint32_t pl_raw = (uint32_t)(limit/rapl_unit.power);
+	uint64_t rawmsr = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
+	putBitField(pl_raw, &rawmsr, 15, 32);
+	write_msr(fd[socketid*num_pkg_core], MSR_PKG_POWER_LIMIT, rawmsr);
+}
+
+JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetDramEnergy(JNIEnv *env,
+		jclass jcls, jint socketid) {
+	double rawresult = getRAPLInfo(socketid, MSR_DRAM_ENERGY_STATUS);
+	return (jdouble) rawresult * rapl_unit.energy;
+}
