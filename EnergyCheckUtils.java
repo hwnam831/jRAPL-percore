@@ -81,8 +81,8 @@ public class EnergyCheckUtils {
 
 	public static void main(String[] args) {
 
-		int sampleperiod = 10;
-		int epochs  = 100;
+		int sampleperiod = 20;
+		int epochs  = 10;
 		if (args.length > 2){
 			sampleperiod = Integer.parseInt(args[1]);
 		}
