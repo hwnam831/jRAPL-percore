@@ -81,8 +81,9 @@ public class EnergyCheckUtils {
 
 	public static void main(String[] args) {
 
-		int sampleperiod = 20;
-		int epochs  = 10;
+		int sampleperiod = 10;
+		//3min by default
+		int epochs  = 180*(1000/sampleperiod);
 		if (args.length > 2){
 			sampleperiod = Integer.parseInt(args[1]);
 		}
@@ -93,8 +94,8 @@ public class EnergyCheckUtils {
 		drambefore = GetDramEnergy(0)*scale;
 		double[] limitinfo = GetPkgLimit(0);
 		long curtimems;
-		System.out.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
-		System.out.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+		System.err.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
+		System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
 		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
 		for (int epc = 0; epc < epochs; epc++){
 			try {
