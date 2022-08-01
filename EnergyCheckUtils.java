@@ -84,9 +84,18 @@ public class EnergyCheckUtils {
 		int sampleperiod = 10;
 		//3min by default
 		int epochs  = 180*(1000/sampleperiod);
-		if (args.length > 2){
-			sampleperiod = Integer.parseInt(args[1]);
+		double pl2 = -1;
+		if (args.length >= 1){
+			sampleperiod = Integer.parseInt(args[0]);
 		}
+		if (args.length >= 2){
+			int duration = Integer.parseInt(args[1]);
+			epochs  = duration*(1000/sampleperiod);
+		}
+		if (args.length >= 3){
+			pl2 = Double.parseDouble(args[2]);
+		}
+
 		double scale = 1000.0/(double)sampleperiod;
 		double pkgbefore, drambefore;
 		double pkgafter, dramafter;
@@ -96,6 +105,14 @@ public class EnergyCheckUtils {
 		long curtimems;
 		System.err.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
 		System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+
+		double prevlimit = limitinfo[2];
+		if (pl2 > 0){
+			System.err.println("Trying to set short term limit to 30W");
+			SetPkgLimit(0, 30);
+			limitinfo = GetPkgLimit(0);
+			System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+		}
 		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
 		for (int epc = 0; epc < epochs; epc++){
 			try {
@@ -109,6 +126,10 @@ public class EnergyCheckUtils {
 			System.out.println(""+curtimems + "," + (dramafter - drambefore) + "," +(pkgafter - pkgbefore));
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
+		}
+		if (pl2 > 0){
+			System.err.println("Reverting back...");
+			SetPkgLimit(0, prevlimit);
 		}
 		ProfileDealloc();
 	}
