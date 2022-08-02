@@ -17,7 +17,7 @@ public class EnergyCheckUtils {
 	// 0: powerlimit1, 1: timewindow1, 2: powerlimit2, 3: timewindow2
 	public native static double[] GetPkgLimit(int socketid);
 	// Set the short-term limit (powerlimit2)
-	public native static void SetPkgLimit(int socketid, double limit);
+	public native static void SetPkgLimit(int socketid, double limit1, double limit2);
 	public native static double GetDramEnergy(int socketid);
 	public native static String EnergyStatCheck();
 	public native static void ProfileDealloc();
@@ -106,12 +106,12 @@ public class EnergyCheckUtils {
 		System.err.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
 		System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
 
-		double prevlimit = limitinfo[2];
 		if (pl2 > 0){
-			System.err.println("Trying to set short term limit to 30W");
-			SetPkgLimit(0, 30);
-			limitinfo = GetPkgLimit(0);
-			System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+			System.err.println("Trying to set short term limit to " + pl2 + "W");
+			SetPkgLimit(0, pl2, pl2);
+			double[] limitinfo2 = GetPkgLimit(0);
+			System.err.println("Power limit1 of pkg: " + limitinfo2[0] + "\t timewindow1 :" + limitinfo2[1]);
+			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
 		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
 		for (int epc = 0; epc < epochs; epc++){
@@ -129,7 +129,10 @@ public class EnergyCheckUtils {
 		}
 		if (pl2 > 0){
 			System.err.println("Reverting back...");
-			SetPkgLimit(0, prevlimit);
+			SetPkgLimit(0, limitinfo[0], limitinfo[2]);
+			double[] limitinfo2 = GetPkgLimit(0);
+			System.err.println("Power limit1 of pkg: " + limitinfo2[0] + "\t timewindow1 :" + limitinfo2[1]);
+			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
 		ProfileDealloc();
 	}

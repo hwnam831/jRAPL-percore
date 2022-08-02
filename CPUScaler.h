@@ -41,7 +41,7 @@ JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
   (JNIEnv *, jclass, jint);
 
 JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetPkgLimit
-  (JNIEnv *, jclass, jint, jdouble);
+  (JNIEnv *, jclass, jint, jdouble, jdouble);
 
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetDramEnergy
   (JNIEnv *, jclass, jint);

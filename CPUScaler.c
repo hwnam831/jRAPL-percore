@@ -216,10 +216,12 @@ JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
   }
 
 JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetPkgLimit
-(JNIEnv *env, jclass jcls, jint socketid, jdouble limit){
-	uint32_t pl_raw = (uint32_t)(limit/rapl_unit.power);
+(JNIEnv *env, jclass jcls, jint socketid, jdouble limit1, jdouble limit2){
+	uint32_t pl_raw1 = (uint32_t)(limit1/rapl_unit.power);
+	uint32_t pl_raw2 = (uint32_t)(limit2/rapl_unit.power);
 	uint64_t rawmsr = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
-	putBitField(pl_raw, &rawmsr, 15, 32);
+	putBitField(pl_raw2, &rawmsr, 15, 32);
+	putBitField(pl_raw1, &rawmsr, 15, 0);
 	write_msr(fd[socketid*num_pkg_core], MSR_PKG_POWER_LIMIT, rawmsr);
 }
 
