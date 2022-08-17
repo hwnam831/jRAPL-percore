@@ -4,7 +4,7 @@ JAVA_HOME = $(shell readlink -f /usr/bin/javac | sed "s:bin/javac::")
 JAVA_INCLUDE = $(JAVA_HOME)/include
 JAVA_INCLUDE_LINUX = $(JAVA_INCLUDE)/linux
  
-all: lib_shared_CPUScaler lib_shared_perfChecker
+all: lib_shared_CPUScaler lib_shared_perfChecker EnergyCheckUtils.class PerfCheckUtils.class
 install: lib_shared_CPUScaler lib_shared_perfChecker
 	sudo mkdir -p /usr/lib/jni
 	sudo cp *.so /usr/lib/jni/
@@ -21,5 +21,7 @@ test: CPUScaler_test.c
 	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) CPUScaler_test.c arch_spec.c msr.c -lc -lm
 	gcc -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) -o cpuscalertest CPUScaler_test.o arch_spec.o msr.o -lc -lm
 	sudo ./cpuscalertest
+%.class: %.java
+	javac $<
 clean:
 	rm -f $(TARGET)
