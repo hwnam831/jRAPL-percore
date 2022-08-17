@@ -16,13 +16,14 @@ public class PerfCheckUtils {
 	static int[] test = new int[100000000];
 
 	static {
+		/* 
 		System.setProperty("java.library.path", System.getProperty("user.dir"));
 		try {
 			Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
 			fieldSysPath.setAccessible(true);
 			fieldSysPath.set(null, null);
 		} catch (Exception e) { }
-
+		*/
 		System.loadLibrary("perfCheck");
 	}
 	

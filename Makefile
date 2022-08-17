@@ -5,9 +5,9 @@ JAVA_INCLUDE = $(JAVA_HOME)/include
 JAVA_INCLUDE_LINUX = $(JAVA_INCLUDE)/linux
  
 all: lib_shared_CPUScaler lib_shared_perfChecker
-install: lib_shared_CPUScaler
+install: lib_shared_CPUScaler lib_shared_perfChecker
 	sudo mkdir -p /usr/lib/jni
-	sudo cp libCPUScaler.so /usr/lib/jni/
+	sudo cp *.so /usr/lib/jni/
 
 lib_shared_perfChecker:
 	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) perfCheck.c
