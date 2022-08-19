@@ -90,7 +90,7 @@ public class PerfCheckUtils {
 	public static void main(String[] args) {
 		long[] preamble; 
 		long[] epilogue;
-		String counters = "cache-misses,cache-references";
+		String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any,branch-instructions,branch-misses,uops_issued.stall_cycles,cpu-cycles";
 		
 //		perfEventInit(counters, false);
 		perfEventInit(counters, true);
@@ -104,14 +104,17 @@ public class PerfCheckUtils {
 		}
 		System.out.println("Finish");
 //		try {
-//			Thread.sleep(10000);
+//			Thread.sleep(1000);
 //		} catch(Exception e) {
 //		}
 //		epilogue = getSinglePerfCounter();
 		epilogue = getMultiPerfCounter();
+		String[] ctrs = counters.split(",");
+		for (int i=0; i<ctrs.length; i++){
+			System.out.println(ctrs[i] + " is: " + (epilogue[i] - preamble[i]));
+		}
 		
-		System.out.println("cache misses is: " + (epilogue[0] - preamble[0]));
-		System.out.println("cache references is: " + (epilogue[1] - preamble[1]));
+		//System.out.println("cache references is: " + (epilogue[1] - preamble[1]));
 
 		perfDisable();
 	}

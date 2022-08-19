@@ -99,8 +99,8 @@ public class EnergyCheckUtils {
 		double scale = 1000.0/(double)sampleperiod;
 		double pkgbefore, drambefore;
 		double pkgafter, dramafter;
-		pkgbefore = GetPkgEnergy(0)*scale;
-		drambefore = GetDramEnergy(0)*scale;
+		pkgbefore = GetPkgEnergy(0);
+		drambefore = GetDramEnergy(0);
 		double[] limitinfo = GetPkgLimit(0);
 		long curtimems;
 		System.err.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
@@ -113,17 +113,19 @@ public class EnergyCheckUtils {
 			System.err.println("Power limit1 of pkg: " + limitinfo2[0] + "\t timewindow1 :" + limitinfo2[1]);
 			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
+		curtimems=java.lang.System.currentTimeMillis();;
 		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
 		for (int epc = 0; epc < epochs; epc++){
 			try {
 				Thread.sleep(sampleperiod);
 			} catch(Exception e) {
 			}
-			
-			pkgafter = GetPkgEnergy(0)*scale;
-			dramafter = GetDramEnergy(0)*scale;
-			curtimems = java.lang.System.currentTimeMillis();
-			System.out.println(""+curtimems + "," + (dramafter - drambefore) + "," +(pkgafter - pkgbefore));
+			long newtimems = java.lang.System.currentTimeMillis();
+			double truescale = 1000.0/(double)(newtimems-curtimems);
+			pkgafter = GetPkgEnergy(0);
+			dramafter = GetDramEnergy(0);
+			curtimems = newtimems
+			System.out.println(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
 		}
