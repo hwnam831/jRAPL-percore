@@ -124,7 +124,7 @@ public class EnergyCheckUtils {
 			double truescale = 1000.0/(double)(newtimems-curtimems);
 			pkgafter = GetPkgEnergy(0);
 			dramafter = GetDramEnergy(0);
-			curtimems = newtimems
+			curtimems = newtimems;
 			System.out.println(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
 			pkgbefore = pkgafter;
 			drambefore = dramafter;

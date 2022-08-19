@@ -90,7 +90,8 @@ public class PerfCheckUtils {
 	public static void main(String[] args) {
 		long[] preamble; 
 		long[] epilogue;
-		String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any,branch-instructions,branch-misses,uops_issued.stall_cycles,cpu-cycles";
+		//String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any,branch-instructions,branch-misses,uops_issued.stall_cycles,cpu-cycles";
+		String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any";
 		
 //		perfEventInit(counters, false);
 		perfEventInit(counters, true);
