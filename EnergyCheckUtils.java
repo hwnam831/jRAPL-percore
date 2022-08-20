@@ -113,7 +113,7 @@ public class EnergyCheckUtils {
 			System.err.println("Power limit1 of pkg: " + limitinfo2[0] + "\t timewindow1 :" + limitinfo2[1]);
 			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
-		curtimems=java.lang.System.currentTimeMillis();;
+		curtimems=java.lang.System.currentTimeMillis();
 		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
 		for (int epc = 0; epc < epochs; epc++){
 			try {

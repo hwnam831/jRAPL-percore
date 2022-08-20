@@ -6,8 +6,9 @@ public class PerfCheckUtils {
 	public native static void groupPerfEventsCheck(String eventNames);
 	public native static void perfEnable();
 	public native static void perfDisable();
+	public native static int getCoreNum();
 	public native static void perfSingleRead(int id, long[] buffer);
-	public native static void perfMultRead(long[] buffer);
+	public native static void perfMultRead(int core_id, long[] buffer);
 	public native static long processSingleValue(long[] buffer);
 	public native static long[] processMultiValue(long[] buffer);
 	
@@ -53,12 +54,12 @@ public class PerfCheckUtils {
 	/**
 	 * Get multiple perf counter values with single read
 	 */
-	public static long[] getMultiPerfCounter() {
+	public static long[] getMultiPerfCounter(int core_id) {
 		long[] buffer = new long[3 + 2 * eventNum];
 		long[] results = new long[eventNum];
 		
 		if(eventNum > 0) {
-			perfMultRead(buffer);
+			perfMultRead(core_id, buffer);
 			results = processMultiValue(buffer);
 		} else {
 			System.err.println("event number is 0, should call perfEventInit first!");
@@ -88,35 +89,51 @@ public class PerfCheckUtils {
 	}
 	
 	public static void main(String[] args) {
-		long[] preamble; 
-		long[] epilogue;
+		
+		
 		//String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any,branch-instructions,branch-misses,uops_issued.stall_cycles,cpu-cycles";
 		String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any";
+		String[] ctrs = counters.split(",");
 		
 //		perfEventInit(counters, false);
 		perfEventInit(counters, true);
 
+		int coreNum = getCoreNum();
+		System.out.println("Core count: " + coreNum);
+		long[][] preamble = new long[coreNum][]; 
+		long[][] epilogue = new long[coreNum][];
+		
 //		preamble = getSinglePerfCounter();
-		preamble = getMultiPerfCounter();
-		System.out.println("Testing...");
+
+		for (int core=0; core<coreNum; core++){
+			preamble[core] = getMultiPerfCounter(core);
+		}
+		
 
 		for(int i = 0; i < test.length; i++) {
 			test[i] *= test[i] + i;
 		}
 		System.out.println("Finish");
-//		try {
-//			Thread.sleep(1000);
-//		} catch(Exception e) {
-//		}
-//		epilogue = getSinglePerfCounter();
-		epilogue = getMultiPerfCounter();
-		String[] ctrs = counters.split(",");
-		for (int i=0; i<ctrs.length; i++){
-			System.out.println(ctrs[i] + " is: " + (epilogue[i] - preamble[i]));
+		System.out.print("CoreNum\t");
+		System.out.println(String.join("\t",ctrs));
+		try {
+			Thread.sleep(10);
+		} catch(Exception e) {
 		}
-		
-		//System.out.println("cache references is: " + (epilogue[1] - preamble[1]));
+//		epilogue = getSinglePerfCounter();
+		long curtimems = java.lang.System.currentTimeMillis();
+		for (int core=0; core<coreNum; core++){
+			epilogue[core] = getMultiPerfCounter(core);
+		}
 
+		System.out.println("Time to read all: " + (java.lang.System.currentTimeMillis() - curtimems));
+		for (int core=0; core<coreNum; core++){
+			System.out.print(core);
+			for (int i=0; i<ctrs.length; i++){
+				System.out.print("\t" + (epilogue[core][i] - preamble[core][i]));
+			}
+			System.out.println();
+		}
 		perfDisable();
 	}
 }

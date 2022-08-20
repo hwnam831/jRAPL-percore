@@ -10,8 +10,8 @@ install: lib_shared_CPUScaler lib_shared_perfChecker
 	sudo cp *.so /usr/lib/jni/
 
 lib_shared_perfChecker:
-	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) perfCheck.c
-	gcc -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) -shared -Wl,-soname,libperfCheck.so -o libperfCheck.so perfCheck.o -lpfm
+	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) perfCheck_percore.c arch_spec.c -lc -lm
+	gcc -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) -shared -Wl,-soname,libperfCheck.so -o libperfCheck.so perfCheck_percore.o arch_spec.o -lpfm -lc -lm
 
 lib_shared_CPUScaler:
 	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) CPUScaler.c arch_spec.c msr.c dvfs.c -lc -lm
