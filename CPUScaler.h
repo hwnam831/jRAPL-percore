@@ -34,6 +34,9 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetPkgEnergy
   (JNIEnv *, jclass, jint);
 
+JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreVoltage
+ (JNIEnv *, jclass, jint);
+
 // If disabled, powerlimit is set to -1
 // limit1: TDP (don't change) limit2: short-term (7.8ms)
 // 0: powerlimit1, 1: timewindow1, 2: powerlimit2, 3: timewindow2

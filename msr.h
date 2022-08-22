@@ -26,6 +26,9 @@
 #define MSR_PP0_POWER_LIMIT        0x638
 #define MSR_PP1_POWER_LIMIT        0x640
 
+//Voltage: bit 47:32
+#define MSR_PERF_STATUS        0x198
+
 /*Power domains*/
 #define PKG_DOMAIN	0
 #define DRAM_DOMAIN	1

@@ -12,6 +12,7 @@ public class EnergyCheckUtils {
 	public native static int ProfileInit();
 	public native static int GetSocketNum();
 	public native static double GetPkgEnergy(int socketid);
+	public native static double GetCoreVoltage(int coreid);
 	// If disabled, powerlimit is set to -1
 	// limit1: TDP (don't change) limit2: short-term (7.8ms)
 	// 0: powerlimit1, 1: timewindow1, 2: powerlimit2, 3: timewindow2
@@ -81,9 +82,9 @@ public class EnergyCheckUtils {
 
 	public static void main(String[] args) {
 
-		int sampleperiod = 10;
+		int sampleperiod = 100;
 		//3min by default
-		int epochs  = 180*(1000/sampleperiod);
+		int epochs  = 10*(1000/sampleperiod);
 		double pl2 = -1;
 		if (args.length >= 1){
 			sampleperiod = Integer.parseInt(args[0]);
@@ -114,7 +115,7 @@ public class EnergyCheckUtils {
 			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
 		curtimems=java.lang.System.currentTimeMillis();
-		System.out.println("Time(ms),DRAM Power(W),Package Power(W)");
+		System.out.println("Time(ms),DRAM Power(W),Package Power(W),corev");
 		for (int epc = 0; epc < epochs; epc++){
 			try {
 				Thread.sleep(sampleperiod);
@@ -125,7 +126,8 @@ public class EnergyCheckUtils {
 			pkgafter = GetPkgEnergy(0);
 			dramafter = GetDramEnergy(0);
 			curtimems = newtimems;
-			System.out.println(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
+			System.out.print(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
+			System.out.println(","+GetCoreVoltage(0));
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
 		}

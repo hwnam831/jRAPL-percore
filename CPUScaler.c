@@ -175,7 +175,7 @@ uint64_t getRAPLInfo(int socketid, unsigned int addr){
 		fprintf(stderr, "ERROR: invalid socket number %d. Max socket %d\n",socketid, getSocketNum());
 		return 0;
 	}
-	uint64_t info = read_msr(fd[socketid*num_pkg_core], addr);	//First 32 bits so don't need shift bits.
+	uint64_t info = read_msr(fd[socketid*num_pkg_core], addr);
 	return info;
 }
 
@@ -183,6 +183,17 @@ JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetPkgEnergy(JNIEnv *env,
 		jclass jcls, jint socketid) {
 	double rawresult = getRAPLInfo(socketid, MSR_PKG_ENERGY_STATUS);
 	return (jdouble) rawresult * rapl_unit.energy;
+}
+
+//coreid: physical core id
+JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreVoltage
+(JNIEnv *env, jclass jcls, jint coreid){
+	double limitinfo[4]; 
+	uint64_t rawresult = read_msr(fd[coreid], MSR_PERF_STATUS);
+	uint32_t rawV = extractBitField(rawresult, 16, 32);
+	double result = (double)(rawV)/8192;
+
+	return result;
 }
 
 JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
@@ -213,7 +224,7 @@ JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
 	(*env)->SetDoubleArrayRegion(env, result, 0, 4, limitinfo);
 	return result;
 
-  }
+}
 
 JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetPkgLimit
 (JNIEnv *env, jclass jcls, jint socketid, jdouble limit1, jdouble limit2){
