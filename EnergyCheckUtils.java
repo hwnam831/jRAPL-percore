@@ -1,4 +1,7 @@
-import java.lang.reflect.Field;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
+
 public class EnergyCheckUtils {
 	//public native static int scale(int freq);
 	//public native static int[] freqAvailable();
@@ -13,6 +16,16 @@ public class EnergyCheckUtils {
 	public native static int GetSocketNum();
 	public native static double GetPkgEnergy(int socketid);
 	public native static double GetCoreVoltage(int coreid);
+	public static int GetCoreFreq(int coreid){
+		int freq = -1;
+		try {
+			Scanner fscnr = new Scanner(new File("/sys/devices/system/cpu/cpu"+coreid+"/cpufreq/scaling_cur_freq"));
+			freq = fscnr.nextInt();
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return freq;
+	}
 	// If disabled, powerlimit is set to -1
 	// limit1: TDP (don't change) limit2: short-term (7.8ms)
 	// 0: powerlimit1, 1: timewindow1, 2: powerlimit2, 3: timewindow2
@@ -127,7 +140,7 @@ public class EnergyCheckUtils {
 			dramafter = GetDramEnergy(0);
 			curtimems = newtimems;
 			System.out.print(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
-			System.out.println(","+GetCoreVoltage(0));
+			System.out.println(","+GetCoreVoltage(0)+","+GetCoreFreq(0));
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
 		}
