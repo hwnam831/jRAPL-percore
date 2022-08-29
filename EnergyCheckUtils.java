@@ -16,10 +16,22 @@ public class EnergyCheckUtils {
 	public native static int GetSocketNum();
 	public native static double GetPkgEnergy(int socketid);
 	public native static double GetCoreVoltage(int coreid);
+	public native static long GetAPERF(int coreid);
+	public native static long GetMPERF(int coreid);
 	public static int GetCoreFreq(int coreid){
 		int freq = -1;
 		try {
 			Scanner fscnr = new Scanner(new File("/sys/devices/system/cpu/cpu"+coreid+"/cpufreq/scaling_cur_freq"));
+			freq = fscnr.nextInt();
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return freq;
+	}
+	public static int GetMaxFreq(int coreid){
+		int freq = -1;
+		try {
+			Scanner fscnr = new Scanner(new File("/sys/devices/system/cpu/cpu"+coreid+"/cpufreq/scaling_max_freq"));
 			freq = fscnr.nextInt();
 		} catch(Exception e){
 			e.printStackTrace();
@@ -128,8 +140,11 @@ public class EnergyCheckUtils {
 			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
 		curtimems=java.lang.System.currentTimeMillis();
-		System.out.println("Time(ms),DRAM Power(W),Package Power(W),corev");
+		System.out.println("Time(ms),DRAM Power(W),Package Power(W),corev,aperf/mperf");
+		float maxfreq = (float)GetMaxFreq(0);
 		for (int epc = 0; epc < epochs; epc++){
+			long aperf = GetAPERF(0);
+			long mperf = GetMPERF(0);
 			try {
 				Thread.sleep(sampleperiod);
 			} catch(Exception e) {
@@ -138,9 +153,12 @@ public class EnergyCheckUtils {
 			double truescale = 1000.0/(double)(newtimems-curtimems);
 			pkgafter = GetPkgEnergy(0);
 			dramafter = GetDramEnergy(0);
+
 			curtimems = newtimems;
 			System.out.print(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
-			System.out.println(","+GetCoreVoltage(0)+","+GetCoreFreq(0));
+			long daperf = GetAPERF(0) - aperf;
+			long dmperf = GetMPERF(0) - mperf;
+			System.out.println(","+GetCoreVoltage(0)+","+GetCoreFreq(0)+","+(maxfreq*daperf)/dmperf);
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
 		}

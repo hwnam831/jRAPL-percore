@@ -188,7 +188,7 @@ JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetPkgEnergy(JNIEnv *env,
 //coreid: physical core id
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreVoltage
 (JNIEnv *env, jclass jcls, jint coreid){
-	double limitinfo[4]; 
+
 	uint64_t rawresult = read_msr(fd[coreid], MSR_PERF_STATUS);
 	uint32_t rawV = extractBitField(rawresult, 16, 32);
 	double result = (double)(rawV)/8192;
@@ -241,3 +241,17 @@ JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetDramEnergy(JNIEnv *env,
 	double rawresult = getRAPLInfo(socketid, MSR_DRAM_ENERGY_STATUS);
 	return (jdouble) rawresult * rapl_unit.energy;
 }
+
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_GetAPERF
+  (JNIEnv *env, jclass jcls, jint coreid){
+	uint64_t rawresult = read_msr(fd[coreid], MSR_APERF);
+
+	return rawresult;
+  }
+
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_GetMPERF
+ (JNIEnv *env, jclass jcls, jint coreid){
+	uint64_t rawresult = read_msr(fd[coreid], MSR_MPERF);
+
+	return rawresult;
+  }

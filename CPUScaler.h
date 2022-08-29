@@ -49,6 +49,12 @@ JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetPkgLimit
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetDramEnergy
   (JNIEnv *, jclass, jint);
 
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_GetAPERF
+  (JNIEnv *, jclass, jint);
+
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_GetMPERF
+  (JNIEnv *, jclass, jint);
+
 /*
  * Class:     EnergyCheckUtils
  * Method:    ProfileDealloc

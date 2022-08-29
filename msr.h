@@ -29,6 +29,11 @@
 //Voltage: bit 47:32
 #define MSR_PERF_STATUS        0x198
 
+//Counted at base clock (ref)
+#define MSR_MPERF	0xe7
+//Counted at the actual clock
+#define MSR_APERF	0xe8
+
 /*Power domains*/
 #define PKG_DOMAIN	0
 #define DRAM_DOMAIN	1
