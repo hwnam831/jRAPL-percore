@@ -80,6 +80,7 @@ public class TraceCollector{
                 System.out.print(","+EnergyCheckUtils.GetCoreVoltage(core)+","+(int)((maxfreq*daperf)/dmperf));
                 for (int i=0; i<ctrs.length; i++){
                     System.out.print("," + (epilogue[thread][i] - preamble[thread][i]));
+                    preamble[thread][i] = epilogue[thread][i];
                 }
                 
                 aperf[core] = EnergyCheckUtils.GetAPERF(core);
