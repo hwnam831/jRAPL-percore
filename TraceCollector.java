@@ -9,7 +9,7 @@ public class TraceCollector{
         
         
 
-        String counters = "cache-misses,instructions,uops_issued.stall_cycles,branch-misses,uops_executed.core";
+        String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
         String[] ctrs = counters.split(",");
 		String firstLine = "Time(ms),Duration(ms),DRAM Power(W),Package Power(W)";
         
