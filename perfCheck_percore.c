@@ -316,6 +316,10 @@ JNIEXPORT jint JNICALL Java_PerfCheckUtils_getCoreNum(JNIEnv * env, jclass jcls)
 	return coreNum;
 }
 
+JNIEXPORT jint JNICALL Java_PerfCheckUtils_getThreadPerCore(JNIEnv * env, jclass jcls) {
+	return num_core_thread;
+}
+
 int main() {
 
 	long long readBuffer[3];

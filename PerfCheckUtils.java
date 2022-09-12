@@ -7,6 +7,7 @@ public class PerfCheckUtils {
 	public native static void perfEnable();
 	public native static void perfDisable();
 	public native static int getCoreNum();
+	public native static int getThreadPerCore();
 	public native static void perfSingleRead(int id, long[] buffer);
 	public native static void perfMultRead(int core_id, long[] buffer);
 	public native static long processSingleValue(long[] buffer);
@@ -92,14 +93,16 @@ public class PerfCheckUtils {
 		
 		
 		//String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any,branch-instructions,branch-misses,uops_issued.stall_cycles,cpu-cycles";
-		String counters = "cache-misses,instructions,uops_issued.stall_cycles,branch-misses,uops_executed.core";
+		String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
 		String[] ctrs = counters.split(",");
 		
 //		perfEventInit(counters, false);
 		perfEventInit(counters, true);
 
 		int coreNum = getCoreNum();
+		int threadspercore = getThreadPerCore();
 		System.out.println("Core count: " + coreNum);
+		System.out.println("Thread per core: " + threadspercore);
 		long[][] preamble = new long[coreNum][]; 
 		long[][] epilogue = new long[coreNum][];
 		

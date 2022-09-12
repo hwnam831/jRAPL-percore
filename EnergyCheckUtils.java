@@ -18,6 +18,8 @@ public class EnergyCheckUtils {
 	public native static double GetCoreVoltage(int coreid);
 	public native static long GetAPERF(int coreid);
 	public native static long GetMPERF(int coreid);
+	public native static int getCoreNum();
+	public native static int getThreadPerCore();
 	public static int GetCoreFreq(int coreid){
 		int freq = -1;
 		try {
@@ -131,7 +133,8 @@ public class EnergyCheckUtils {
 		long curtimems;
 		System.err.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
 		System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
-
+		System.out.println("Core count: " + getCoreNum());
+		System.out.println("Thread per core: " + getThreadPerCore());
 		if (pl2 > 0){
 			System.err.println("Trying to set short term limit to " + pl2 + "W");
 			SetPkgLimit(0, pl2, pl2);

@@ -63,6 +63,10 @@ JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_GetMPERF
 JNIEXPORT void JNICALL Java_EnergyCheckUtils_ProfileDealloc
   (JNIEnv *, jclass);
 
+JNIEXPORT jint JNICALL Java_EnergyCheckUtils_getCoreNum(JNIEnv * env, jclass jcls);
+
+JNIEXPORT jint JNICALL Java_EnergyCheckUtils_getThreadPerCore(JNIEnv * env, jclass jcls);
+
 #ifdef __cplusplus
 }
 #endif

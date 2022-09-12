@@ -255,3 +255,10 @@ JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_GetMPERF
 
 	return rawresult;
   }
+JNIEXPORT jint JNICALL Java_EnergyCheckUtils_getCoreNum(JNIEnv * env, jclass jcls) {
+	return coreNum;
+}
+
+JNIEXPORT jint JNICALL Java_EnergyCheckUtils_getThreadPerCore(JNIEnv * env, jclass jcls) {
+	return num_core_thread;
+}

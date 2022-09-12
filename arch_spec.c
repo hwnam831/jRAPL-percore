@@ -105,9 +105,13 @@ int getSocketNum() {
 	//	printf("my_id->pkg_id: %d, max_pkg: %d\n", os_map[i].pkg_id, max_pkg);
 		
 	//}
+	
 	num_pkg_core = num_pkg_thread / num_core_thread;
 	num_pkg = coreNum / num_pkg_thread;
-
+	#ifdef NOSMT
+		coreNum = coreNum/num_core_thread;
+		num_core_thread=1;
+	#endif
 	return num_pkg;
 
 	//printf("num_pkg_thread: %d, num_core_thread: %d, coreNum: %d, num_pkg: %d\n", num_pkg_thread, num_core_thread, coreNum, num_pkg);

@@ -4,7 +4,7 @@ public class TraceCollector{
 
         int durationms=60000;
         int sampleperiod = 20;
-        int threadspercore = 2;
+        
         //int socketNum = EnergyCheckUtils.GetSocketNum();
         
         
@@ -15,6 +15,7 @@ public class TraceCollector{
         
 
 		PerfCheckUtils.perfEventInit(counters, true);
+        int threadspercore = PerfCheckUtils.getThreadPerCore();
         int threadNum = PerfCheckUtils.getCoreNum(); //number of logical cores
         //System.out.print("CoreNum\t" + threadNum + "\n");
         for (int i=0; i<threadNum; i++){
