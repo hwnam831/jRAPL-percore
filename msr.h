@@ -42,6 +42,12 @@
 #define DISABLE 0
 #define ENABLE 1
 
+#define FIXED_CTR_CTL 0x38D
+#define FIXED_CTR0	0x309 //Inst retired
+#define FIXED_CTR1	0x30A //Clks unhalted
+#define FIXED_CTR2	0x30B //ref clks unhalted
+#define FIXED_CTR3	0x30C //Topdown slots
+
 /***global variable***/
 typedef struct rapl_msr_unit {
 	double power;
