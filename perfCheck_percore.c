@@ -89,6 +89,7 @@ JNIEXPORT void JNICALL Java_PerfCheckUtils_perfInit(JNIEnv * env, jclass jcls, j
 		perf_event_attrs[i].size = sizeof(perf_event_attr_t);
 	}
 
+
 	enabled = 1;
 }
 

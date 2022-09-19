@@ -54,6 +54,7 @@ JNIEXPORT jint JNICALL Java_EnergyCheckUtils_ProfileInit(JNIEnv *env, jclass jcl
 	for(i = 0; i < num_pkg_core*num_pkg; i++) {
 		sprintf(msr_filename, "/dev/cpu/%d/msr", i*num_core_thread);
 		fd[i] = open(msr_filename, O_RDWR);
+		write_msr(fd[i], FIXED_CTR_CTL, 0x111); // enable fixed counters
 	}
 
 	uint64_t unit_info= read_msr(fd[0], MSR_RAPL_POWER_UNIT);
@@ -261,4 +262,12 @@ JNIEXPORT jint JNICALL Java_EnergyCheckUtils_getCoreNum(JNIEnv * env, jclass jcl
 
 JNIEXPORT jint JNICALL Java_EnergyCheckUtils_getThreadPerCore(JNIEnv * env, jclass jcls) {
 	return num_core_thread;
+}
+
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getInstCounter(JNIEnv * env, jclass jcls, jint core) {
+	return read_msr(fd[core], FIXED_CTR0);
+}
+
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getClkCounter(JNIEnv * env, jclass jcls, jint core) {
+	return read_msr(fd[core], FIXED_CTR1);
 }

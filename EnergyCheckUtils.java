@@ -20,6 +20,8 @@ public class EnergyCheckUtils {
 	public native static long GetMPERF(int coreid);
 	public native static int getCoreNum();
 	public native static int getThreadPerCore();
+	public native static long getInstCounter(int coreid);
+	public native static long getClkCounter(int coreid);
 	public static int GetCoreFreq(int coreid){
 		int freq = -1;
 		try {

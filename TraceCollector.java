@@ -9,7 +9,8 @@ public class TraceCollector{
         
         
 
-        String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
+        //String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
+        String counters = "cpu-cycles,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
         String[] ctrs = counters.split(",");
 		String firstLine = "Time(ms),Duration(ms),DRAM Power(W),Package Power(W)";
         
@@ -23,6 +24,7 @@ public class TraceCollector{
             for (String ctr:ctrs){
                 linenow = linenow + ","+ctr+":"+i;
             }
+            linenow = linenow + ",cycle-count:" + i;
             firstLine += linenow;
         }
         System.out.println(firstLine);
@@ -41,7 +43,8 @@ public class TraceCollector{
 		long[] mperf = new long[threadNum/threadspercore];
         long[][] preamble = new long[threadNum][]; 
 		long[][] epilogue = new long[threadNum][];
-
+        long[] cycle_counts = new long[threadNum];
+        long[] inst_counts = new long[threadNum];
         long curtimems=java.lang.System.currentTimeMillis();
         for (int core=0; core<threadNum/threadspercore; core++){
             aperf[core] = EnergyCheckUtils.GetAPERF(core);
@@ -57,6 +60,8 @@ public class TraceCollector{
 
 		for (int thread=0; thread<threadNum; thread++){
 			preamble[thread] = PerfCheckUtils.getMultiPerfCounter(thread);
+            cycle_counts[thread] = EnergyCheckUtils.getClkCounter(thread);
+            inst_counts[thread] = EnergyCheckUtils.getInstCounter(thread);
 		}
         
 		for (int epc = 0; epc < durationms/sampleperiod; epc++){
@@ -83,7 +88,12 @@ public class TraceCollector{
                     System.out.print("," + (epilogue[thread][i] - preamble[thread][i]));
                     preamble[thread][i] = epilogue[thread][i];
                 }
-                
+                long clkcount = EnergyCheckUtils.getClkCounter(thread);
+                long instcount = EnergyCheckUtils.getInstCounter(thread);
+                System.out.print("," + (clkcount - cycle_counts[thread]));
+                //System.out.print("," + (instcount - inst_counts[thread]));
+                cycle_counts[thread] = clkcount;
+                inst_counts[thread] = instcount;
                 aperf[core] = EnergyCheckUtils.GetAPERF(core);
                 mperf[core] = EnergyCheckUtils.GetMPERF(core);
             }
