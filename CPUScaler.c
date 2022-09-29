@@ -186,6 +186,12 @@ JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetPkgEnergy(JNIEnv *env,
 	return (jdouble) rawresult * rapl_unit.energy;
 }
 
+JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreEnergy(JNIEnv *env,
+		jclass jcls, jint coreid) {
+	double rawresult = read_msr(fd[coreid], MSR_PP0_ENERGY_STATUS);
+	return (jdouble) rawresult * rapl_unit.energy;
+}
+
 //coreid: physical core id
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreVoltage
 (JNIEnv *env, jclass jcls, jint coreid){

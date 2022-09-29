@@ -15,6 +15,7 @@ public class EnergyCheckUtils {
 	public native static int ProfileInit();
 	public native static int GetSocketNum();
 	public native static double GetPkgEnergy(int socketid);
+	public native static double GetCoreEnergy(int coreid);
 	public native static double GetCoreVoltage(int coreid);
 	public native static long GetAPERF(int coreid);
 	public native static long GetMPERF(int coreid);
@@ -135,8 +136,13 @@ public class EnergyCheckUtils {
 		long curtimems;
 		System.err.println("Power limit1 of pkg: " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
 		System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
-		System.out.println("Core count: " + getCoreNum());
-		System.out.println("Thread per core: " + getThreadPerCore());
+		int corenum = getCoreNum();
+		System.err.println("Core count: " + corenum);
+		
+		System.err.println("Socket count: " + GetSocketNum());
+		System.err.println("Thread per core: " + getThreadPerCore());
+		double[] corebefore = new double[corenum];
+		double[] coreafter = new double[corenum];
 		if (pl2 > 0){
 			System.err.println("Trying to set short term limit to " + pl2 + "W");
 			SetPkgLimit(0, pl2, pl2);
@@ -144,8 +150,15 @@ public class EnergyCheckUtils {
 			System.err.println("Power limit1 of pkg: " + limitinfo2[0] + "\t timewindow1 :" + limitinfo2[1]);
 			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
+		for (int core=0; core < corenum; core++ ){
+			corebefore[core] = GetCoreEnergy(core);
+		}
 		curtimems=java.lang.System.currentTimeMillis();
-		System.out.println("Time(ms),DRAM Power(W),Package Power(W),corev,aperf/mperf");
+		System.out.print("Time(ms),DRAM Power(W),Package Power(W)");
+		for (int core=0; core < corenum; core++ ){
+			System.out.print(",core:"+core);
+		}
+		System.out.println();
 		float maxfreq = (float)GetMaxFreq(0);
 		for (int epc = 0; epc < epochs; epc++){
 			long aperf = GetAPERF(0);
@@ -161,9 +174,13 @@ public class EnergyCheckUtils {
 
 			curtimems = newtimems;
 			System.out.print(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
-			long daperf = GetAPERF(0) - aperf;
-			long dmperf = GetMPERF(0) - mperf;
-			System.out.println(","+GetCoreVoltage(0)+","+GetCoreFreq(0)+","+(maxfreq*daperf)/dmperf);
+			for (int core=0; core < corenum; core++ ){
+				coreafter[core] = GetCoreEnergy(core);
+				System.out.print(","+(coreafter[core]-corebefore[core]));
+				corebefore[core] = coreafter[core];
+			}
+			System.out.println();
+			
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
 		}

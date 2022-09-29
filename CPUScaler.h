@@ -34,6 +34,9 @@ JNIEXPORT jstring JNICALL Java_EnergyCheckUtils_EnergyStatCheck
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetPkgEnergy
   (JNIEnv *, jclass, jint);
 
+JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreEnergy(JNIEnv *env,
+		jclass jcls, jint coreid);
+
 JNIEXPORT jdouble JNICALL Java_EnergyCheckUtils_GetCoreVoltage
  (JNIEnv *, jclass, jint);
 
