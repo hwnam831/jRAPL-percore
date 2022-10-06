@@ -5,7 +5,10 @@ JAVA_INCLUDE = $(JAVA_HOME)/include
 JAVA_INCLUDE_LINUX = $(JAVA_INCLUDE)/linux
 DEFS = -DNOSMT
  
-all: lib_shared_CPUScaler lib_shared_perfChecker EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class
+all: lib_shared_CPUScaler lib_shared_perfChecker EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class microbench
+
+microbench: microbench.c
+	gcc -O3 -o microbench microbench.c
 install: lib_shared_CPUScaler lib_shared_perfChecker
 	sudo mkdir -p /usr/lib/jni
 	sudo cp *.so /usr/lib/jni/
