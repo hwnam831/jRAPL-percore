@@ -71,37 +71,40 @@ public class TraceCollector{
 			} catch(Exception e) {
 			}
 
-            long duration = java.lang.System.currentTimeMillis() - curtimems;
-			double truescale = 1000.0/duration;
+            
+			
 			pkgafter = EnergyCheckUtils.GetPkgEnergy(0);
 			dramafter = EnergyCheckUtils.GetDramEnergy(0);
 
-			
-			System.out.print(""+curtimems + ","+ duration + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
+			long duration = java.lang.System.currentTimeMillis() - curtimems;
+            double truescale = 1000.0/duration;
+            String curline = ""+curtimems + ","+ duration + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale;
+
             for (int thread=0; thread<threadNum; thread++){
                 epilogue[thread] = PerfCheckUtils.getMultiPerfCounter(thread);
                 int core = thread/threadspercore;
                 long daperf = EnergyCheckUtils.GetAPERF(core) - aperf[core];
 			    long dmperf = EnergyCheckUtils.GetMPERF(core) - mperf[core];
-                System.out.print(","+EnergyCheckUtils.GetCoreVoltage(core)+","+(int)((maxfreq*daperf)/dmperf));
+                curline += ","+EnergyCheckUtils.GetCoreVoltage(core)+","+(int)((maxfreq*daperf)/dmperf);
                 for (int i=0; i<ctrs.length; i++){
-                    System.out.print("," + (epilogue[thread][i] - preamble[thread][i]));
+                    curline += "," + (epilogue[thread][i] - preamble[thread][i]);
                     preamble[thread][i] = epilogue[thread][i];
                 }
                 long clkcount = EnergyCheckUtils.getClkCounter(thread);
                 long instcount = EnergyCheckUtils.getInstCounter(thread);
-                System.out.print("," + (clkcount - cycle_counts[thread]));
+                curline += "," + (clkcount - cycle_counts[thread]);
                 //System.out.print("," + (instcount - inst_counts[thread]));
                 cycle_counts[thread] = clkcount;
                 inst_counts[thread] = instcount;
                 aperf[core] = EnergyCheckUtils.GetAPERF(core);
                 mperf[core] = EnergyCheckUtils.GetMPERF(core);
             }
-			System.out.println();
+			System.out.println(curline);
 			
+            
+			pkgbefore = EnergyCheckUtils.GetPkgEnergy(0);
+			drambefore = EnergyCheckUtils.GetDramEnergy(0);
             curtimems = java.lang.System.currentTimeMillis();
-			pkgbefore = pkgafter;
-			drambefore = dramafter;
 		}
 
         EnergyCheckUtils.ProfileDealloc();
