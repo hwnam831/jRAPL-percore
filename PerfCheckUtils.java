@@ -93,7 +93,7 @@ public class PerfCheckUtils {
 		
 		
 		//String counters = "cache-misses,cache-references,uops_executed.core,instructions,cycle_activity.cycles_mem_any,branch-instructions,branch-misses,uops_issued.stall_cycles,cpu-cycles";
-		String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
+		String counters = "cache-misses,instructions,cache-misses,branch-misses,uops_executed.core";
 		String[] ctrs = counters.split(",");
 		
 //		perfEventInit(counters, false);

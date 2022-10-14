@@ -113,7 +113,7 @@ public class EnergyCheckUtils {
 
 		int sampleperiod = 100;
 		//3min by default
-		int epochs  = 10*(1000/sampleperiod);
+		int epochs  = 1*(1000/sampleperiod);
 		double pl2 = -1;
 		if (args.length >= 1){
 			sampleperiod = Integer.parseInt(args[0]);
@@ -137,6 +137,7 @@ public class EnergyCheckUtils {
 		System.err.println("Power limit2 of pkg: " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
 		System.out.println("Core count: " + getCoreNum());
 		System.out.println("Thread per core: " + getThreadPerCore());
+				System.out.println("Socket count: " + GetSocketNum());
 		if (pl2 > 0){
 			System.err.println("Trying to set short term limit to " + pl2 + "W");
 			SetPkgLimit(0, pl2, pl2);
