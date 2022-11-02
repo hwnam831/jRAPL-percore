@@ -1,0 +1,1 @@
+./set_freq.sh $1; ./expscript.sh myconfig $1; ./expscript.sh autocomplete $1; ./expscript.sh ocr-img $1; ./expscript.sh img-resize $1; ./expscript.sh markdown $1; ./expscript.sh sentiment $1;
