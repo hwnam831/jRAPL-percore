@@ -16,6 +16,7 @@ rapl_msr_parameter *parameters;
 char *ener_info;
 /*global variable*/
 int *fd;
+int tcc_temp;
 
 void copy_to_string(char *ener_info, char uncore_buffer[60], int uncore_num, char cpu_buffer[60], int cpu_num, char package_buffer[60], int package_num, int i, int *offset) {
 	memcpy(ener_info + *offset, &uncore_buffer, uncore_num);
@@ -62,7 +63,9 @@ JNIEXPORT jint JNICALL Java_EnergyCheckUtils_ProfileInit(JNIEnv *env, jclass jcl
 	get_msr_unit(&rapl_unit, unit_info);
 	get_wraparound_energy(rapl_unit.energy);
 	wraparound_energy = (int)WRAPAROUND_VALUE;
-
+	uint64_t temp_info = read_msr(fd[0], MSR_TEMPERATURE_TARGET);
+	tcc_temp = extractBitField(temp_info, 8, 16); // 23:16
+	//printf("TCC temp %d\n",tcc_temp);
 	return wraparound_energy;
 }
 
@@ -270,4 +273,10 @@ JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getInstCounter(JNIEnv * env, jclas
 
 JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getClkCounter(JNIEnv * env, jclass jcls, jint core) {
 	return read_msr(fd[core], FIXED_CTR1);
+}
+
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getCoreTemp(JNIEnv * env, jclass jcls, jint core) {
+	uint64_t raw_info = read_msr(fd[core], IA32_THERM_STATUS);
+	long offset = extractBitField(raw_info, 7, 16);//22:16
+	return tcc_temp - offset;
 }

@@ -34,6 +34,8 @@
 //Counted at the actual clock
 #define MSR_APERF	0xe8
 
+#define MSR_TEMPERATURE_TARGET 0x1a2 //23:16 for TCC max temperature
+#define IA32_THERM_STATUS 0x19c //22:16 for relative temperature to TCC
 /*Power domains*/
 #define PKG_DOMAIN	0
 #define DRAM_DOMAIN	1

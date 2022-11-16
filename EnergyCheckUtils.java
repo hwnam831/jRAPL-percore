@@ -22,6 +22,7 @@ public class EnergyCheckUtils {
 	public native static int getThreadPerCore();
 	public native static long getInstCounter(int coreid);
 	public native static long getClkCounter(int coreid);
+	public native static long getCoreTemp(int coreid);
 	public static int GetCoreFreq(int coreid){
 		int freq = -1;
 		try {
@@ -146,7 +147,7 @@ public class EnergyCheckUtils {
 			System.err.println("Power limit2 of pkg: " + limitinfo2[2] + "\t timewindow2 :" + limitinfo2[3]);
 		}
 		curtimems=java.lang.System.currentTimeMillis();
-		System.out.println("Time(ms),DRAM Power(W),Package Power(W),corev,aperf/mperf");
+		System.out.println("Time(ms),DRAM Power(W),Package Power(W),corev,aperf/mperf,temp:0");
 		float maxfreq = (float)GetMaxFreq(0);
 		for (int epc = 0; epc < epochs; epc++){
 			long aperf = GetAPERF(0);
@@ -164,7 +165,8 @@ public class EnergyCheckUtils {
 			System.out.print(""+curtimems + "," + (dramafter - drambefore)*truescale + "," +(pkgafter - pkgbefore)*truescale);
 			long daperf = GetAPERF(0) - aperf;
 			long dmperf = GetMPERF(0) - mperf;
-			System.out.println(","+GetCoreVoltage(0)+","+GetCoreFreq(0)+","+(maxfreq*daperf)/dmperf);
+			long coretemp = getCoreTemp(0);
+			System.out.println(","+GetCoreVoltage(0)+","+GetCoreFreq(0)+","+(maxfreq*daperf)/dmperf+","+coretemp);
 			pkgbefore = pkgafter;
 			drambefore = dramafter;
 		}

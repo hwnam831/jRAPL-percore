@@ -71,6 +71,8 @@ JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getInstCounter(JNIEnv * env, jclas
 
 JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getClkCounter(JNIEnv * env, jclass jcls, jint core);
 
+JNIEXPORT jlong JNICALL Java_EnergyCheckUtils_getCoreTemp(JNIEnv * env, jclass jcls, jint core);
+
 #ifdef __cplusplus
 }
 #endif
