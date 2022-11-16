@@ -7,7 +7,13 @@ class Trace{
     public long[] inst;
     public long[] aperf;
 	public long[] mperf;
+
+    //Instantenous readings. Need averaging
     public double[] voltages;
+    public double[] temperatures;
+    public int instantCount;
+
+    //Perf counters
     public long[][] counters; 
     public double pkgE;
     public double dramE;
@@ -23,6 +29,7 @@ class Trace{
         
         this.mperf = new long[core_count];
         this.voltages = new double[core_count];
+        this.temperatures = new double[core_count];
         this.names = ctr_string.split(",");
         this.counters = new long[core_count][this.names.length];
         this.maxfreq = (float)EnergyCheckUtils.GetMaxFreq(socketnum*core_count);
@@ -37,11 +44,36 @@ class Trace{
         for (int core=0; core<core_count; core++){
             aperf[core] = EnergyCheckUtils.GetAPERF(core+offset);
             mperf[core] = EnergyCheckUtils.GetMPERF(core+offset);
-            voltages[core] = EnergyCheckUtils.GetCoreVoltage(core+offset);
+            if (instantCount == 0){
+                voltages[core] = EnergyCheckUtils.GetCoreVoltage(core+offset);
+                temperatures[core] = EnergyCheckUtils.getCoreTemp(core+offset);
+            } else {
+                voltages[core] += EnergyCheckUtils.GetCoreVoltage(core+offset);
+                temperatures[core] += EnergyCheckUtils.getCoreTemp(core+offset);
+                //instantCount++;
+                voltages[core] = voltages[core] / (instantCount+1);
+                temperatures[core] = temperatures[core] / (instantCount+1);
+            }
             counters[core] = PerfCheckUtils.getMultiPerfCounter(core+offset);
             cycles[core] = EnergyCheckUtils.getClkCounter(core+offset);
             inst[core] = EnergyCheckUtils.getInstCounter(core+offset);
         }
+        instantCount = 0;
+    }
+    public void instantRead(){
+        int offset = this.socketnum * this.core_count;
+        if(instantCount == 0){
+            for (int core=0; core<core_count; core++){
+                voltages[core] = EnergyCheckUtils.GetCoreVoltage(core+offset);
+                temperatures[core] = EnergyCheckUtils.getCoreTemp(core+offset);
+            }
+        } else {
+            for (int core=0; core<core_count; core++){
+                voltages[core] += EnergyCheckUtils.GetCoreVoltage(core+offset);
+                temperatures[core] += EnergyCheckUtils.getCoreTemp(core+offset);
+            }
+        }
+        instantCount++;
     }
 
     public void copyFrom(Trace from){
@@ -62,6 +94,7 @@ class Trace{
         String firstLine = ",DRAM Power(W):" + socketnum+",Package Power(W):" + socketnum;
         for (int i=offset; i<offset+core_count; i++){
             String linenow = ",Voltage:"+i+",Freq(kHz):"+i;
+            linenow = linenow + ",Temp(C):" + i;
             linenow = linenow + ",instructions:" + i;
             linenow = linenow + ",cycle-count:" + i;
             for (String ctr:names){
@@ -82,6 +115,7 @@ class Trace{
             long daperf = aperf[core] - before.aperf[core];
             long dmperf = mperf[core] - before.mperf[core];
             curline += ","+voltages[core]+","+(int)((maxfreq*daperf)/dmperf);
+            curline += "," + temperatures[core];
             curline += "," + (inst[core] - before.inst[core]);
             curline += "," + (cycles[core] - before.cycles[core]);
             
@@ -139,13 +173,18 @@ public class TraceCollector{
             }
             long curtimems=java.lang.System.currentTimeMillis();
             long elapse = curtimems - before[0].time;
+            long nextPeriod = before[0].time + sampleperiod;
             if (elapse < 0){
                 elapse = sampleperiod-1;
             }
-			try {
-				Thread.sleep(sampleperiod - elapse);
-			} catch(Exception e) {
-			}
+            while(java.lang.System.currentTimeMillis() < nextPeriod)
+                try {
+                    Thread.sleep(2);
+                    for (int i=0; i<num_sockets; i++){
+                        after[i].instantRead(); //Voltages, Temperatures
+                    }
+                } catch(Exception e) {
+                }
             for (int i=0; i<num_sockets; i++){
                 after[i].readCounters();
             }
