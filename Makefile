@@ -7,6 +7,8 @@ DEFS = -DNOSMT
  
 all: lib_shared_CPUScaler lib_shared_perfChecker EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class microbench
 
+matmul:
+	gcc -O3 -o matmul matrix-mul-pthread.c -lpthread
 microbench: microbench.c
 	gcc -O3 -o microbench microbench.c
 install: lib_shared_CPUScaler lib_shared_perfChecker
