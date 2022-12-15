@@ -139,7 +139,7 @@ public class TraceCollector{
         
 
         //String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
-        String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
+        String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses";
         String[] ctrs = counters.split(",");
 		String firstLine = "Time(ms),Duration(ms)";
         
