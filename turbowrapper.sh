@@ -1,1 +1,1 @@
-./expscript.sh myconfig turbo; ./expscript.sh autocomplete turbo; ./expscript.sh ocr-img turbo; ./expscript.sh img-resize turbo; ./expscript.sh markdown turbo; ./expscript.sh sentiment turbo;
+./expscript.sh myconfig turbo; ./expscript.sh ocr-img turbo; ./expscript.sh img-resize turbo; ./expscript.sh markdown turbo; ./expscript.sh sentiment turbo;
