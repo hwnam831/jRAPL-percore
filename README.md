@@ -105,3 +105,18 @@ Contact
 --------------------------------------------------------------
 
 - Kenan Liu {kliu20@binghamton.edu}
+
+### Apps
+- video_processing: 35sec (0.3)
+- rnn_serving: 0.026 sec (20) X
+- sentiment X
+- ml_training: 5.0sec (3.0)
+- primes: 2sec (8)
+- image_rotate: 0.8sec (20) X
+- img-resize: 1sec? (20)
+- linpack: 0.4sec 500% (1)
+- matmul: 0.1sec (2.5)
+- lr_serving: 8sec (1)
+- cnn_serving: 11sec (1)
+- markdown X
+- ocr-img: 1.5
