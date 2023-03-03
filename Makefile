@@ -3,9 +3,10 @@ TARGET = *.so *.o *.class cpuscalertest
 JAVA_HOME = $(shell readlink -f /usr/bin/javac | sed "s:bin/javac::")
 JAVA_INCLUDE = $(JAVA_HOME)/include
 JAVA_INCLUDE_LINUX = $(JAVA_INCLUDE)/linux
+CLASSPATH = $(PWD):$(PWD)/argparse4j-0.9.0.jar
 DEFS = -DNOSMT
  
-all: lib_shared_CPUScaler lib_shared_perfChecker EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class microbench
+all: lib_shared_CPUScaler lib_shared_perfChecker EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class LocalController.class microbench
 
 matmul:
 	gcc -O3 -o matmul matrix-mul-pthread.c -lpthread
@@ -28,6 +29,6 @@ test: CPUScaler_test.c
 	gcc -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) $(DEFS) -o cpuscalertest CPUScaler_test.o arch_spec.o msr.o -lc -lm
 	sudo ./cpuscalertest
 %.class: %.java
-	javac $<
+	javac -cp $(CLASSPATH) $<
 clean:
 	rm -f $(TARGET)
