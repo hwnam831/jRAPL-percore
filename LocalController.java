@@ -3,6 +3,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.io.*;  
 import java.net.*; 
 import java.util.ArrayDeque;
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
+import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.inf.Namespace;
 
 class PerfCounters{
     public long timems;
@@ -80,6 +84,7 @@ class TraceCollectorThread extends Thread{
     public ArrayDeque<PerfCounters> perfCounters;
     public int traceWindow;
     private boolean running = true;
+    boolean verbose = false;
     public TraceCollectorThread(int traceWindow, int periodms){
         this.traceWindow = traceWindow;
         this.periodms = periodms;
@@ -184,6 +189,7 @@ class PowerControllerThread extends Thread{
     public void run(){
         try{
             ServerSocket ss = new ServerSocket(1234);
+            ss.setSoTimeout(2000); // try per 2 seconds
             while(running){
                 try{
                     Socket s = ss.accept();
@@ -208,8 +214,17 @@ class PowerControllerThread extends Thread{
 }  
 public class LocalController{
     public static void main(String[] args){
+
+        ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
+                .defaultHelp(true);
+        parser.addArgument("--policy")
+                .choices("fair", "slurm", "ml").setDefault("fair");
+        
+
         TraceCollectorThread t = new TraceCollectorThread(16, 10);
+        PowerControllerThread pt = new PowerControllerThread(100);
         t.start();
+        pt.start();
         try{
         Thread.sleep(300);
         } catch (Exception e){
@@ -229,11 +244,13 @@ public class LocalController{
                 }
             }
             t.lock.unlock();
-            System.out.println(l);
+            //System.out.println(l);
         }
         try{
         t.terminate();
+        pt.terminate();
         t.join();
+        pt.join();
         } catch (Exception e){
 
         }
