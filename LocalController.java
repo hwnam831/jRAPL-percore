@@ -1,6 +1,7 @@
 
 import java.util.concurrent.locks.ReentrantLock;  
-
+import java.io.*;  
+import java.net.*; 
 import java.util.ArrayDeque;
 
 class PerfCounters{
@@ -149,7 +150,62 @@ class TraceCollectorThread extends Thread{
     }
     
 }  
+ 
+class PowerControllerThread extends Thread{
+    double[] pl1;
+    double[] pl2;
+    double[] curpl;
+    int num_sockets;
+    boolean running = true;
+    String policy;
+    public PowerControllerThread(double powerlimit){
 
+        num_sockets = EnergyCheckUtils.GetSocketNum();
+        pl1 = new double[num_sockets];
+        pl2 = new double[num_sockets];
+        curpl = new double[num_sockets];
+        for (int s = 0; s<num_sockets; s++){
+            double[] limitinfo = EnergyCheckUtils.GetPkgLimit(s);
+            pl1[s] = limitinfo[0];
+            pl2[s] = limitinfo[2];
+            curpl[s] = powerlimit / num_sockets;
+		    System.err.println("Power limit1 of pkg " + s + ": " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
+		    System.err.println("Power limit2 of pkg " + s + ": " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+            System.err.println("Trying to set short term limit to " + curpl[s] + "W");
+			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]);
+        }
+        
+
+
+    }
+    public void terminate(){
+        running = false;
+    }
+    public void run(){
+        try{
+            ServerSocket ss = new ServerSocket(1234);
+            while(running){
+                try{
+                    Socket s = ss.accept();
+
+                } catch (Exception e){
+                    System.out.println("Timeout. Retrying:");
+                }
+
+            
+            }
+            ss.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        for (int s = 0; s<num_sockets; s++){
+            
+            System.err.println("Reverting back to original limit");
+			EnergyCheckUtils.SetPkgLimit(s, pl1[s], pl2[s]);
+        }
+    }
+    
+}  
 public class LocalController{
     public static void main(String[] args){
         TraceCollectorThread t = new TraceCollectorThread(16, 10);
