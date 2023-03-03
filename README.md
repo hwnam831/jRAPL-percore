@@ -122,6 +122,9 @@ Contact
 - ocr-img: 1.5
 
 ## TODO
-- LocalController
-- TraceCollector thread
-- internal sanitizer
+- LocalController w fair and slurm (Monday)
+- Experiment with MXContainer (fair and slurm) (Tuesday? Wednesday?)
+- JNI libtorch
+- ML local controller
+- Hierarchical controller at controller node
+- Online linear regression baseline?
