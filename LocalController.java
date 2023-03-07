@@ -87,10 +87,12 @@ class TraceCollectorThread extends Thread{
     public int traceWindow;
     private boolean running = true;
     boolean verbose = false;
-    public TraceCollectorThread(int traceWindow, int periodms){
+    String csvfile;
+    public TraceCollectorThread(int traceWindow, int periodms, String csvfile){
         this.traceWindow = traceWindow;
         this.periodms = periodms;
         this.lock = new ReentrantLock();
+        this.csvfile = csvfile;
         String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
         String[] ctrs = counters.split(",");
 		String firstLine = "Time(ms),Duration(ms)";
@@ -115,6 +117,20 @@ class TraceCollectorThread extends Thread{
         running = false;
     }
     public void run(){
+        PrintWriter fwriter;
+        try {
+
+            fwriter = new PrintWriter(new FileOutputStream(csvfile));
+            String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
+            String[] ctrs = counters.split(",");
+		    String firstLine = "Time(ms),Duration(ms)";
+            for (int i=0; i<num_sockets; i++){
+                firstLine += after[i].headerCSV();
+            }
+            fwriter.println(firstLine + ",Valid");
+        } catch (Exception e) {
+            fwriter = new PrintWriter(OutputStream.nullOutputStream());
+        }
         while (running){
             for (int i=0; i<num_sockets; i++){
                 before[i].copyFrom(after[i]);
@@ -137,9 +153,16 @@ class TraceCollectorThread extends Thread{
                 after[i].readCounters();
             }
             PerfCounters ctr = new PerfCounters(before, after);
+            if (ctr.valid || true) {
+                String curline = ""+after[0].time + ","+ (after[0].time-before[0].time);
+
+                for (int i=0; i<num_sockets; i++){
+                    curline += after[i].CSVString(before[i]);
+                }
+                fwriter.println(curline + "," + ctr.valid);
+            }
             lock.lock();
             if (ctr.valid) {
-                
                 perfCounters.add(ctr);
                 
             } else {
@@ -154,6 +177,7 @@ class TraceCollectorThread extends Thread{
             }
             lock.unlock();
         }
+        fwriter.close();
     }
     
 }  
@@ -252,13 +276,15 @@ public class LocalController{
         }
 
 
-        TraceCollectorThread t = new TraceCollectorThread(16, 10);
+        
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"));
         double[] curpl = pt.curpl.clone();
         double[] powerusage = new double[curpl.length];
         int timeperiodms = (Integer)res.get("period");
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         String policy = (String) res.get("policy");
+        TraceCollectorThread t = new TraceCollectorThread(16, 10, policy 
+            + "_" + (Integer)res.get("cap") + "W.csv");
         t.start();
         pt.start();
         try{
