@@ -2,11 +2,13 @@
 import java.util.concurrent.locks.ReentrantLock;  
 import java.io.*;  
 import java.net.*; 
+import java.util.*;
 import java.util.ArrayDeque;
-import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.*;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
+
 
 class PerfCounters{
     public long timems;
@@ -163,6 +165,7 @@ class PowerControllerThread extends Thread{
     int num_sockets;
     boolean running = true;
     String policy;
+    public static final int port = 1234;
     public PowerControllerThread(double powerlimit){
 
         num_sockets = EnergyCheckUtils.GetSocketNum();
@@ -188,12 +191,27 @@ class PowerControllerThread extends Thread{
     }
     public void run(){
         try{
-            ServerSocket ss = new ServerSocket(1234);
+            ServerSocket ss = new ServerSocket(port);
             ss.setSoTimeout(2000); // try per 2 seconds
             while(running){
                 try{
                     Socket s = ss.accept();
-
+                    DataInputStream din=new DataInputStream(s.getInputStream());  
+                    DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
+                    
+                    String str="",str2="";
+                    str=din.readUTF();
+                    //System.out.println("client says: "+str);
+                    String [] pls = str.split(",", curpl.length);
+                    
+                    for (int i=0; i<curpl.length; i++){
+                        double pl = Double.parseDouble(pls[i]);
+                        curpl[i] = pl;
+                        EnergyCheckUtils.SetPkgLimit(i, curpl[i], curpl[i]);
+                    }
+                    din.close();
+                    dout.close();
+                    s.close();
                 } catch (Exception e){
                     System.out.println("Timeout. Retrying:");
                 }
@@ -217,33 +235,94 @@ public class LocalController{
 
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
-        parser.addArgument("--policy")
+        parser.addArgument("-p","--policy")
                 .choices("fair", "slurm", "ml").setDefault("fair");
-        
+        parser.addArgument("-c", "--cap").type(Integer.class)
+                .setDefault(100).help("Power cap for this node");
+        parser.addArgument("--period").type(Integer.class)
+                .setDefault(300).help("Control period in ms");
+        parser.addArgument("--duration").type(Integer.class)
+                .setDefault(60).help("Time duration in seconds");
+        Namespace res;
+        try{
+            res = parser.parseArgs(args);
+        } catch (ArgumentParserException e){
+            parser.handleError(e);
+            return;
+        }
+
 
         TraceCollectorThread t = new TraceCollectorThread(16, 10);
-        PowerControllerThread pt = new PowerControllerThread(100);
+        PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"));
+        double[] curpl = pt.curpl.clone();
+        double[] powerusage = new double[curpl.length];
+        int timeperiodms = (Integer)res.get("period");
+        int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
+        String policy = (String) res.get("policy");
         t.start();
         pt.start();
         try{
-        Thread.sleep(300);
+        Thread.sleep(timeperiodms);
         } catch (Exception e){
             
         }
-        for (int epc = 0; epc < 60; epc++){
+        for (int epc = 0; epc < epochs; epc++){
             try{
-                Thread.sleep(300);
-                } catch (Exception e){
+                Thread.sleep(timeperiodms);
+            } catch (Exception e){
                     
-                }
+            }
+            if (t.perfCounters.size() < 4){
+                continue;
+            }
             t.lock.lock();
             String l = "";
+            PerfCounters fctr = t.perfCounters.peekFirst();
+            for (int i = 0; i<powerusage.length; i++){
+                
+                powerusage[i] = fctr.pkgCtrs[i][1];
+            }
+
             for (PerfCounters ctr: t.perfCounters){
-                for (float[] pctrs : ctr.pkgCtrs){
-                    l = l + pctrs[0] + "," + pctrs[1] + "\n";
+                for (int i = 0; i<powerusage.length; i++){
+                    powerusage[i] = 0.75*powerusage[i] + 0.25*ctr.pkgCtrs[i][1];
                 }
             }
             t.lock.unlock();
+            double[] newpl = curpl.clone();
+            double pool = 0.0;
+            double alpha = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
+            if (policy.equals("fair")){
+                continue;
+            }
+            for (int i = 0; i<curpl.length; i++){
+                double diff = curpl[i] - powerusage[i];
+                
+                if (diff > 0){
+                    pool += diff * 0.5 * alpha;
+                    newpl[i] -= diff*0.5*alpha;
+                }
+                
+            }
+            for (int i = 0; i<newpl.length; i++){
+                newpl[i] += pool / newpl.length;
+            }
+            System.out.println("Cur power limit: " + Arrays.toString(curpl) + "\tCur power usage: " + 
+            Arrays.toString(powerusage) + "\t New power limit: " + Arrays.toString(newpl));
+            try{
+                Socket s = new Socket("localhost", PowerControllerThread.port);
+                DataInputStream din=new DataInputStream(s.getInputStream());  
+                DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
+                String message = Arrays.toString(newpl);
+                dout.writeUTF(message.substring(1,message.length()-1));
+                din.close();
+                dout.close();
+                s.close();
+                curpl = newpl;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             //System.out.println(l);
         }
         try{
