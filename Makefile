@@ -17,7 +17,7 @@ matmul:
 	gcc -O3 -o matmul matrix-mul-pthread.c -lpthread
 microbench: microbench.c
 	gcc -O3 -o microbench microbench.c
-install: lib_shared_CPUScaler lib_shared_perfChecker
+install: lib_shared_CPUScaler lib_shared_perfChecker libMLModel lib_shared_jtorch
 	sudo mkdir -p /usr/lib/jni
 	sudo cp *.so /usr/lib/jni/
 
@@ -33,6 +33,9 @@ lib_shared_jtorch:
 	/usr/bin/c++ $(CXX_DEFINES) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) $(CXX_INCLUDES) $(CXX_FLAGS) -o jtorch.cc.o -c jtorch.cc
 	/usr/bin/c++ -fPIC  -D_GLIBCXX_USE_CXX11_ABI=0  -shared -Wl,-soname,libjtorch.so -o libjtorch.so jtorch.cc.o $(MYDEPS)
 
+libMLModel:
+	/usr/bin/c++ $(CXX_DEFINES) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) $(CXX_INCLUDES) $(CXX_FLAGS) -o endmodel.cc.o -c endmodel.cc
+	/usr/bin/c++ -fPIC  -D_GLIBCXX_USE_CXX11_ABI=0  -shared -Wl,-soname,libMLModel.so -o libMLModel.so endmodel.cc.o $(MYDEPS)
 
 test: CPUScaler_test.c
 	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) $(DEFS) CPUScaler_test.c arch_spec.c msr.c -lc -lm

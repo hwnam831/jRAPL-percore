@@ -20,8 +20,8 @@ JNIEXPORT void JNICALL Java_MLModel_init
  * Method:    close
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_MLModel_close
-  (JNIEnv *, jclass);
+//JNIEXPORT void JNICALL Java_MLModel_close
+//  (JNIEnv *, jclass);
 
 /*
  * Class:     MLModel
