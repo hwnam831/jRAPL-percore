@@ -95,6 +95,9 @@ public class MLModel {
             flat[i] = (float)0.1;
         }
         float[] coefs = forward(flat);
-        System.out.println(coefs);
+        for (int i=0; i<12; i++){
+            System.out.print(coefs[i] + ",");
+        }
+        System.out.println();
     }
 }
