@@ -18,7 +18,7 @@ class PerfCounters{
     public static final float perNsMax = 40;
     public float[][] coreCtrs;
     public static boolean validate(boolean valid, float min, float max, float val){
-        return valid && val > min && val < max;
+        return valid && val > min-0.01 && val < max;
     }
     public boolean valid = true;
     public PerfCounters(Trace[] before, Trace after[]){
@@ -55,6 +55,9 @@ class PerfCounters{
                     float bps = (float)(after[socket].counters[core][i] - 
                         before[socket].counters[core][i])/duration_ns;
                     valid = validate(valid, 0, perNsMax, bps);
+                    if (!(bps > -0.01 && bps < perNsMax)){
+                        System.err.println("Invalid " + after[0].names[i] + " val: " + bps + " max: " + perNsMax);
+                    }
                     coreCtrs[core+socket*cps][5+i] = bps;
                 }
             }
@@ -82,39 +85,76 @@ class TraceCollectorThread extends Thread{
     int num_sockets;
     int threadNum;
     int periodms;
+    int ctr_period;
     ReentrantLock lock;
     public ArrayDeque<PerfCounters> perfCounters;
+    public float[] moving_input;
+    public float[] moving_power;
+    private int tracecount;
     public int traceWindow;
     private boolean running = true;
     boolean verbose = false;
     String csvfile;
-    public TraceCollectorThread(int traceWindow, int periodms, String csvfile){
+    public TraceCollectorThread(int traceWindow, int periodms, String csvfile, int ctr_period){
         this.traceWindow = traceWindow;
         this.periodms = periodms;
         this.lock = new ReentrantLock();
         this.csvfile = csvfile;
+        this.ctr_period = ctr_period;
         String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
-        String[] ctrs = counters.split(",");
-		String firstLine = "Time(ms),Duration(ms)";
+        
         
 
 		PerfCheckUtils.perfEventInit(counters, true);
         
         threadNum = PerfCheckUtils.getCoreNum(); //number of logical cores
+        //System.out.println("Threadnum " + threadNum);
         num_sockets = EnergyCheckUtils.GetSocketNum();
         before = new Trace[num_sockets];
         after = new Trace[num_sockets];
         for (int i=0; i<num_sockets; i++){
             after[i] = new Trace(threadNum/num_sockets, counters, i);
-            firstLine += after[i].headerCSV();
+
             before[i] = new Trace(threadNum/num_sockets, counters, i);
         }
         perfCounters = new ArrayDeque<PerfCounters>();
-
+        this.tracecount = 0;
+        moving_input = new float[threadNum*9];
+        moving_power = new float[num_sockets];
+        for (int i=0; i<moving_power.length; i++){
+            moving_power[i] = 0;
+        }
+        for (int i=0; i<moving_input.length; i++){
+            moving_input[i] = 0;
+        }
 
     }
     public void terminate(){
         running = false;
+    }
+    //
+    private void update_input(PerfCounters pctr){
+        float alpha = tracecount < (float)ctr_period/periodms ? 
+                (float)1/tracecount : (float)periodms/ctr_period;
+        //float alpha = (float)periodms/(float)ctr_period;
+        //System.out.println(alpha);
+        if (tracecount == 0){
+            return;
+        }
+        int cps = threadNum/num_sockets;
+        for (int pkg=0; pkg<num_sockets; pkg++){
+            int offset = pkg*cps*9;
+            
+            moving_power[pkg] = (1-alpha)*moving_power[pkg] +
+                alpha*pctr.pkgCtrs[pkg][1];
+            for (int core=0; core<cps; core++){
+                for (int c=0; c<pctr.coreCtrs[0].length; c++){
+                    moving_input[offset + core*9 + c] = (1-alpha)*moving_input[offset+ core*9 + c] + 
+                        alpha*pctr.coreCtrs[pkg*cps+core][c];
+                }
+            }
+        }
+
     }
     public void run(){
         PrintWriter fwriter;
@@ -143,7 +183,7 @@ class TraceCollectorThread extends Thread{
             }
             while(java.lang.System.currentTimeMillis() < nextPeriod)
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(2);
                     for (int i=0; i<num_sockets; i++){
                         after[i].instantRead(); //Voltages, Temperatures
                     }
@@ -153,17 +193,19 @@ class TraceCollectorThread extends Thread{
                 after[i].readCounters();
             }
             PerfCounters ctr = new PerfCounters(before, after);
-            if (ctr.valid || true) {
-                String curline = ""+after[0].time + ","+ (after[0].time-before[0].time);
 
-                for (int i=0; i<num_sockets; i++){
-                    curline += after[i].CSVString(before[i]);
-                }
-                fwriter.println(curline + "," + ctr.valid);
+            String curline = ""+after[0].time + ","+ (after[0].time-before[0].time);
+
+            for (int i=0; i<num_sockets; i++){
+                curline += after[i].CSVString(before[i]);
             }
+            fwriter.println(curline + "," + ctr.valid);
+            
             lock.lock();
             if (ctr.valid) {
                 perfCounters.add(ctr);
+                tracecount++;
+                update_input(ctr);
                 
             } else {
                 if (!perfCounters.isEmpty()){
@@ -237,7 +279,7 @@ class PowerControllerThread extends Thread{
                     dout.close();
                     s.close();
                 } catch (Exception e){
-                    System.out.println("Timeout. Retrying:");
+                    System.err.println("Timeout. Retrying:");
                 }
 
             
@@ -265,6 +307,8 @@ public class LocalController{
                 .setDefault(100).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
                 .setDefault(300).help("Control period in ms");
+        parser.addArgument("--sampleperiod").type(Integer.class)
+                .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
                 .setDefault(60).help("Time duration in seconds");
         Namespace res;
@@ -274,17 +318,21 @@ public class LocalController{
             parser.handleError(e);
             return;
         }
-
+        
 
         
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"));
         double[] curpl = pt.curpl.clone();
-        double[] powerusage = new double[curpl.length];
+        float[] powerusage = new float[curpl.length];
         int timeperiodms = (Integer)res.get("period");
+        int sampleperiodms = (Integer)res.get("sampleperiod");
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         String policy = (String) res.get("policy");
-        TraceCollectorThread t = new TraceCollectorThread(16, 10, policy 
-            + "_" + (Integer)res.get("cap") + "W.csv");
+        TraceCollectorThread t = new TraceCollectorThread(16, sampleperiodms, policy 
+            + "_" + (Integer)res.get("cap") + "W.csv", timeperiodms);
+        int num_pkg = t.num_sockets;
+        int core_per_pkg = t.threadNum/t.num_sockets;
+        MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power.pt", "c220g2_bips.pt");
         t.start();
         pt.start();
         try{
@@ -292,6 +340,7 @@ public class LocalController{
         } catch (Exception e){
             
         }
+        float[] predictions = new float[num_pkg];
         for (int epc = 0; epc < epochs; epc++){
             try{
                 Thread.sleep(timeperiodms);
@@ -304,6 +353,7 @@ public class LocalController{
             t.lock.lock();
             String l = "";
             PerfCounters fctr = t.perfCounters.peekFirst();
+            /** 
             for (int i = 0; i<powerusage.length; i++){
                 
                 powerusage[i] = fctr.pkgCtrs[i][1];
@@ -314,7 +364,26 @@ public class LocalController{
                     powerusage[i] = 0.75*powerusage[i] + 0.25*ctr.pkgCtrs[i][1];
                 }
             }
+            */
+            for (int i = 0; i<powerusage.length; i++){
+                
+                powerusage[i] = t.moving_power[i];
+            }
+            endmodel.inference(t.moving_input);
+            float[][] freqs = new float[num_pkg][core_per_pkg];
+            for (int pkg=0; pkg<t.num_sockets; pkg++){
+                for (int core=0; core<core_per_pkg; core++){
+                    freqs[pkg][core] = fctr.coreCtrs[core + pkg*core_per_pkg][1];
+
+                }
+            }
             t.lock.unlock();
+            if(epc >= 1){
+                endmodel.update_bias(powerusage, predictions);
+            }
+            predictions = endmodel.predict_power(freqs);
+            System.out.println("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
+                ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
             double alpha = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero

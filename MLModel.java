@@ -37,6 +37,8 @@ public class MLModel {
     public int num_counters;
     public PolyFunc[][] power_func; //3rd-order poly
     public PolyFunc[][] bips_func; // ax+b
+    public float[] adaptive_bias;
+    public static final float adaptive_lr = 0.5f;
     
     //public native static 
     //public 
@@ -54,10 +56,12 @@ public class MLModel {
         init(fname_power, fname_bips);
         this.power_func = new PolyFunc[num_pkg][num_core];
         this.bips_func = new PolyFunc[num_pkg][num_core];
+        this.adaptive_bias = new float[num_pkg];
         for (int p=0; p<num_pkg; p++){
+            this.adaptive_bias[p] = 0;
             for (int c=0; c<num_core; c++){
                 this.power_func[p][c] = new PolyFunc(3);
-                this.power_func[p][c] = new PolyFunc(2);
+                this.bips_func[p][c] = new PolyFunc(1);
             }
         }
     }
@@ -74,6 +78,27 @@ public class MLModel {
                 this.bips_func[p][c].coef[0] = coefs[(offset+c)*6 + 4];
                 this.bips_func[p][c].coef[1] = coefs[(offset+c)*6 + 5];
             }
+        }
+    }
+    public void inference(float[] flat_input){
+        flat_to_poly(forward(flat_input));
+    }
+    public float[] predict_power(float[][] freqs){
+        float[] power = new float[this.num_pkg];
+        for (int pkg=0; pkg<this.num_pkg; pkg++){
+            power[pkg] = adaptive_bias[pkg];
+        }
+        for (int pkg=0; pkg<this.num_pkg; pkg++){
+            for (int core=0; core<this.num_core; core++){
+                power[pkg] += power_func[pkg][core].apply(freqs[pkg][core]);
+            }
+        }
+        return power;
+    }
+    public void update_bias(float[] actual, float[] prediction){
+        for (int i=0; i<adaptive_bias.length; i++){
+            adaptive_bias[i] = (1-adaptive_lr) * adaptive_bias[i] +
+                adaptive_lr*(actual[i] - prediction[i]);
         }
     }
     public static void main(String[] args){
@@ -99,5 +124,10 @@ public class MLModel {
             System.out.print(coefs[i] + ",");
         }
         System.out.println();
+        long curtimems=java.lang.System.currentTimeMillis();
+        for (int epc=0; epc<100; epc++){
+            coefs = forward(flat);
+        }
+        System.out.println("Time per inference: " + (float)(java.lang.System.currentTimeMillis() - curtimems)/100);
     }
 }

@@ -125,6 +125,7 @@ class Trace{
         }
         return curline;
     }
+
 }
 
 public class TraceCollector{
