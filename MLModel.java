@@ -37,7 +37,8 @@ public class MLModel {
     public int num_counters;
     public PolyFunc[][] power_func; //3rd-order poly
     public PolyFunc[][] bips_func; // ax+b
-    public float[] adaptive_bias;
+    public float[] power_bias;
+    public float[][] bips_bias;
     public static final float adaptive_lr = 0.5f;
     
     //public native static 
@@ -56,10 +57,12 @@ public class MLModel {
         init(fname_power, fname_bips);
         this.power_func = new PolyFunc[num_pkg][num_core];
         this.bips_func = new PolyFunc[num_pkg][num_core];
-        this.adaptive_bias = new float[num_pkg];
+        this.power_bias = new float[num_pkg];
+        this.bips_bias = new float[num_pkg][num_core];
         for (int p=0; p<num_pkg; p++){
-            this.adaptive_bias[p] = 0;
+            this.power_bias[p] = 0;
             for (int c=0; c<num_core; c++){
+                this.bips_bias[p][c] = 0.0f;
                 this.power_func[p][c] = new PolyFunc(3);
                 this.bips_func[p][c] = new PolyFunc(1);
             }
@@ -86,7 +89,7 @@ public class MLModel {
     public float[] predict_power(float[][] freqs){
         float[] power = new float[this.num_pkg];
         for (int pkg=0; pkg<this.num_pkg; pkg++){
-            power[pkg] = adaptive_bias[pkg];
+            power[pkg] = power_bias[pkg];
         }
         for (int pkg=0; pkg<this.num_pkg; pkg++){
             for (int core=0; core<this.num_core; core++){
@@ -94,6 +97,28 @@ public class MLModel {
             }
         }
         return power;
+    }
+    public float[] getEDPGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        
+        //float[][] grad_power = new float[this.num_pkg][this.num_core];
+        //float[][] val_power = new float[this.num_pkg][this.num_core];
+        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
+        //float[][] val_perf = new float[this.num_pkg][this.num_core];
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            for (int c=0; c<this.num_core; c++){
+                float power = power_func[p][c].apply(freqs[p][c]);
+                float bips = bips_func[p][c].apply(freqs[p][c]);
+                float g_power = power_func[p][c].derivative(freqs[p][c]);
+                float g_perf = bips_func[p][c].derivative(freqs[p][c]);
+                grad_sum += 1/(bips*bips) - 2*(power/(bips*bips*bips))*(g_perf/g_power);
+            }
+            gradients[p] = grad_sum;
+        }
+        //E*D = P/B^2  G(E*D) = 1/B^2 - 2P/B^3 * (GB/BP)
+
+        return gradients;
     }
     public void update_bias(float[] actual, float[] prediction){
         for (int i=0; i<adaptive_bias.length; i++){

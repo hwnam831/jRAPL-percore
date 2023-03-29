@@ -386,22 +386,50 @@ public class LocalController{
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
+            final double min_pool = 2.0;
             double alpha = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
-            if (policy.equals("fair")){
-                continue;
-            }
-            for (int i = 0; i<curpl.length; i++){
-                double diff = curpl[i] - powerusage[i];
+            if (policy.equals("slurm")){
+                for (int i = 0; i<curpl.length; i++){
+                    double diff = curpl[i] - powerusage[i];
+                    
+                    if (diff > 0){
+                        pool += diff * 0.5 * alpha;
+                        newpl[i] -= diff*0.5*alpha;
+                    }
                 
-                if (diff > 0){
-                    pool += diff * 0.5 * alpha;
-                    newpl[i] -= diff*0.5*alpha;
                 }
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] += pool / newpl.length;
+                }
+            } else if (policy.equals("ml")){
+                for (int i = 0; i<curpl.length; i++){
+                    double diff = curpl[i] - powerusage[i];
+                    
+                    if (diff > 0){
+                        pool += diff;
+                        newpl[i] -= diff;
+                    }
                 
+                }
+                if (pool < min_pool) {
+                    double extra_pool = min_pool - pool;
+                    for (int i=0; i<newpl.length; i++){
+                        newpl[i] -= extra_pool/newpl.length;
+                    }
+                }
+                float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
+                float grad_sum = 0;
+                for (float g: edp_gradients){
+                    grad_sum += g;
+                }
+                for (int i=0; i<newpl.length; i++){
+                    newpl[i] += pool*edp_gradients[i]/grad_sum;
+                }
+
+            } else {
+                continue; //Assume fair policy
             }
-            for (int i = 0; i<newpl.length; i++){
-                newpl[i] += pool / newpl.length;
-            }
+            
             System.out.println("Cur power limit: " + Arrays.toString(curpl) + "\tCur power usage: " + 
             Arrays.toString(powerusage) + "\t New power limit: " + Arrays.toString(newpl));
             try{
