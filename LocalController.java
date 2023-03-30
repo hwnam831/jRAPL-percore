@@ -439,7 +439,7 @@ public class LocalController{
                 continue; //Assume fair policy
             }
             
-            System.out.println("Cur power limit," + arrToStr(curpl) +
+            System.out.println(",Cur power limit," + arrToStr(curpl) +
                 ",New power limit," + arrToStr(newpl));
             try{
                 Socket s = new Socket("localhost", PowerControllerThread.port);
