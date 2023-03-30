@@ -421,6 +421,7 @@ public class LocalController{
                 }
                 if (pool < min_pool) {
                     double extra_pool = min_pool - pool;
+                    pool = min_pool;
                     for (int i=0; i<newpl.length; i++){
                         newpl[i] -= extra_pool/newpl.length;
                     }
