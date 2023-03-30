@@ -297,6 +297,12 @@ class PowerControllerThread extends Thread{
     
 }  
 public class LocalController{
+    public static String arrToStr(float[] arr){
+        return Arrays.toString(arr).replace('[', ' ').replace(']',' ');
+    }
+    public static String arrToStr(double[] arr){
+        return Arrays.toString(arr).replace('[', ' ').replace(']',' ');
+    }
     public static void main(String[] args){
 
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
@@ -382,8 +388,10 @@ public class LocalController{
                 endmodel.update_bias(powerusage, predictions);
             }
             predictions = endmodel.predict_power(freqs);
-            System.out.println("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
-                ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' '));
+            float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
+            System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
+                ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
+                ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
             final double min_pool = 2.0;
@@ -406,8 +414,8 @@ public class LocalController{
                     double diff = curpl[i] - powerusage[i];
                     
                     if (diff > 0){
-                        pool += diff;
-                        newpl[i] -= diff;
+                        pool += 0.5*diff;
+                        newpl[i] -= 0.5*diff;
                     }
                 
                 }
@@ -417,21 +425,21 @@ public class LocalController{
                         newpl[i] -= extra_pool/newpl.length;
                     }
                 }
-                float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
+                
                 float grad_sum = 0;
                 for (float g: edp_gradients){
-                    grad_sum += g;
+                    grad_sum -= g;
                 }
                 for (int i=0; i<newpl.length; i++){
-                    newpl[i] += pool*edp_gradients[i]/grad_sum;
+                    newpl[i] -= pool*edp_gradients[i]/grad_sum;
                 }
 
             } else {
                 continue; //Assume fair policy
             }
             
-            System.out.println("Cur power limit: " + Arrays.toString(curpl) + "\tCur power usage: " + 
-            Arrays.toString(powerusage) + "\t New power limit: " + Arrays.toString(newpl));
+            System.out.println("Cur power limit," + arrToStr(curpl) +
+                ",New power limit," + arrToStr(newpl));
             try{
                 Socket s = new Socket("localhost", PowerControllerThread.port);
                 DataInputStream din=new DataInputStream(s.getInputStream());  

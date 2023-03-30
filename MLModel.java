@@ -121,8 +121,8 @@ public class MLModel {
         return gradients;
     }
     public void update_bias(float[] actual, float[] prediction){
-        for (int i=0; i<adaptive_bias.length; i++){
-            adaptive_bias[i] = (1-adaptive_lr) * adaptive_bias[i] +
+        for (int i=0; i<power_bias.length; i++){
+            power_bias[i] = (1-adaptive_lr) * power_bias[i] +
                 adaptive_lr*(actual[i] - prediction[i]);
         }
     }
