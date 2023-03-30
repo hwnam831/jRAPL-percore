@@ -429,10 +429,10 @@ public class LocalController{
                 
                 float grad_sum = 0;
                 for (float g: edp_gradients){
-                    grad_sum -= g;
+                    grad_sum += g;
                 }
                 for (int i=0; i<newpl.length; i++){
-                    newpl[i] -= pool*edp_gradients[i]/grad_sum;
+                    newpl[i] += pool*edp_gradients[i]/grad_sum;
                 }
 
             } else {

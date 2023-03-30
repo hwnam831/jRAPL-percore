@@ -112,11 +112,11 @@ public class MLModel {
                 float bips = bips_func[p][c].apply(freqs[p][c]);
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
-                grad_sum += 1/(bips*bips) - 2*(power/(bips*bips*bips))*(g_perf/g_power);
+                grad_sum += 2*(bips/power)*(g_perf/g_power) - (bips*bips)/(power*power);
             }
             gradients[p] = grad_sum;
         }
-        //E*D = P/B^2  G(E*D) = 1/B^2 - 2P/B^3 * (GB/BP)
+        //1/E*D = B^2/P  G(B^2/P) = 2*B/P * (dB/df)*(df/dP) - B^2/P^2
 
         return gradients;
     }
