@@ -128,3 +128,5 @@ Contact
 - ML local controller
 - Hierarchical controller at controller node
 - Online linear regression baseline?
+- BIPS prediction/adaptive?
+- B^2, B gradients

@@ -347,6 +347,8 @@ public class LocalController{
             
         }
         float[] predictions = new float[num_pkg];
+        float[] curperf = new float[num_pkg];
+        float[] perfpredictions = new float[num_pkg];
         for (int epc = 0; epc < epochs; epc++){
             try{
                 Thread.sleep(timeperiodms);
@@ -374,6 +376,16 @@ public class LocalController{
             for (int i = 0; i<powerusage.length; i++){
                 
                 powerusage[i] = t.moving_power[i];
+
+            }
+            for (int i = 0; i<curperf.length; i++){
+                
+                curperf[i] = 0;
+
+                for (int j=0; j<fctr.coreCtrs[i].length; j++){
+                    curperf[i] += fctr.coreCtrs[i][3];
+                }
+
             }
             endmodel.inference(t.moving_input);
             float[][] freqs = new float[num_pkg][core_per_pkg];
@@ -388,10 +400,13 @@ public class LocalController{
                 endmodel.update_bias(powerusage, predictions);
             }
             predictions = endmodel.predict_power(freqs);
-            float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
+            perfpredictions = endmodel.predict_perf(freqs);
+            float[] edp_gradients = endmodel.getPerfGradients(freqs); // gradients per socket
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
                 ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
+            System.out.print("Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
+                ",Bips Prediction," + Arrays.toString(perfpredictions).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
             final double min_pool = 2.0;

@@ -5,6 +5,9 @@ class PolyFunc {
     public PolyFunc(int dim){
         this.dim = dim;
         this.coef = new float[dim+1];
+        for (float c: coef){
+            c=0;
+        }
     }
     public float apply(float x){
         float val = 1;
@@ -23,6 +26,18 @@ class PolyFunc {
             val = val * x;
         }
         return output;
+    }
+    public String polyString(){
+        String line = ""+coef[0];
+        for (int i=1; i<coef.length; i++){
+            line += " + " + coef[i] + "x^" + i;
+        }
+        return line;
+    }
+    public void add(PolyFunc p){
+        for (int i=0; i<this.dim+1; i++){
+            coef[i] += p.coef[i];
+        }
     }
 }
 
@@ -98,6 +113,19 @@ public class MLModel {
         }
         return power;
     }
+
+    public float[] predict_perf(float[][] freqs){
+        float[] perf = new float[this.num_pkg];
+        //for (int pkg=0; pkg<this.num_pkg; pkg++){
+        //    power[pkg] = power_bias[pkg];
+        //}
+        for (int pkg=0; pkg<this.num_pkg; pkg++){
+            for (int core=0; core<this.num_core; core++){
+                perf[pkg] += bips_func[pkg][core].apply(freqs[pkg][core]);
+            }
+        }
+        return perf;
+    }
     public float[] getEDPGradients(float[][] freqs){
         float[] gradients = new float[this.num_pkg];
         
@@ -120,6 +148,58 @@ public class MLModel {
 
         return gradients;
     }
+    public float[] getPerfGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        
+        //float[][] grad_power = new float[this.num_pkg][this.num_core];
+        //float[][] val_power = new float[this.num_pkg][this.num_core];
+        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
+        //float[][] val_perf = new float[this.num_pkg][this.num_core];
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            PolyFunc pkg_bips = new PolyFunc(1);
+            PolyFunc pkg_power = new PolyFunc(3);
+            for (int c=0; c<this.num_core; c++){
+                float f = freqs[p][c];
+
+                float bips = bips_func[p][c].apply(f);
+                float g_power = power_func[p][c].derivative(f);
+                float g_perf = bips_func[p][c].derivative(f);
+                grad_sum += (g_perf/g_power);
+                pkg_bips.add(bips_func[p][c]);
+                pkg_power.add(power_func[p][c]);
+            }
+            System.err.println("PKG " + p + " Perf:" + pkg_bips.polyString() + "\tPower:" + pkg_power.polyString());
+            gradients[p] = grad_sum;
+        }
+        //dB^2/dP = 2B*dB/df * df/dP
+
+        return gradients;
+    }
+    public float[] getEnergyGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        
+        //float[][] grad_power = new float[this.num_pkg][this.num_core];
+        //float[][] val_power = new float[this.num_pkg][this.num_core];
+        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
+        //float[][] val_perf = new float[this.num_pkg][this.num_core];
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            for (int c=0; c<this.num_core; c++){
+                float f = freqs[p][c];
+                float power = power_func[p][c].apply(f);
+                float bips = bips_func[p][c].apply(f);
+                float g_power = power_func[p][c].derivative(f);
+                float g_perf = bips_func[p][c].derivative(f);
+                grad_sum += (g_perf/g_power)/power - bips/(power*power);
+            }
+            gradients[p] = grad_sum;
+        }
+        //d(B/P)/dP =(dB/df * df/dP)/P - B/P^2
+
+        return gradients;
+    }
+
     public void update_bias(float[] actual, float[] prediction){
         for (int i=0; i<power_bias.length; i++){
             power_bias[i] = (1-adaptive_lr) * power_bias[i] +
