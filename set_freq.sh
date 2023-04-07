@@ -1,4 +1,4 @@
-#sudo cpupower frequency-set --governor userspace --min $1 --max $1
+#sudo cpupower frequency-set --governor userspace --min $1MHz --max $1MHz
 for i in {0..19}
 do
     sudo cpufreq-set -c $i -f $1MHz
