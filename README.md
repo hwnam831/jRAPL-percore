@@ -130,3 +130,7 @@ Contact
 - Online linear regression baseline?
 - BIPS prediction/adaptive?
 - B^2, B gradients
+- Idle exp collect again
+- change to 20ms
+- constantly changing frequency
+- V-F line, power as function of voltage

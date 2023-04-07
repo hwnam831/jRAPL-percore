@@ -133,7 +133,7 @@ public class TraceCollector{
     public static void main(String[] args) {
 
         int durationms=60000;
-        int sampleperiod = 10;
+        int sampleperiod = 20;
         
         //int socketNum = EnergyCheckUtils.GetSocketNum();
         
