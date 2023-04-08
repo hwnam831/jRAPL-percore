@@ -94,6 +94,8 @@ Energy check only works for at most 2 sockets CPU.
 ### TODO
 - per-core perfcheckutils
 - perf list to match PPEP
+- two app config
+- predetermined pkg scheduling
 
 Contributions
 --------------------------------------------------------------
