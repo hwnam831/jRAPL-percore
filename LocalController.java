@@ -401,11 +401,11 @@ public class LocalController{
             }
             predictions = endmodel.predict_power(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
-            float[] edp_gradients = endmodel.getPerfGradients(freqs); // gradients per socket
+            float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
                 ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
-            System.out.print("Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
+            System.out.print(",Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
                 ",Bips Prediction," + Arrays.toString(perfpredictions).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
@@ -457,6 +457,7 @@ public class LocalController{
             System.out.println(",Cur power limit," + arrToStr(curpl) +
                 ",New power limit," + arrToStr(newpl));
             try{
+                
                 Socket s = new Socket("localhost", PowerControllerThread.port);
                 DataInputStream din=new DataInputStream(s.getInputStream());  
                 DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
@@ -466,6 +467,7 @@ public class LocalController{
                 dout.close();
                 s.close();
                 curpl = newpl;
+                
             } catch (Exception e) {
                 e.printStackTrace();
             }
