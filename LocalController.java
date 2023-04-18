@@ -465,6 +465,8 @@ public class LocalController{
                 }
 
             } else {
+                System.out.println(",Cur power limit," + arrToStr(curpl) +
+                ",New power limit," + arrToStr(newpl));
                 continue; //Assume fair policy
             }
             

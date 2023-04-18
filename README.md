@@ -136,3 +136,5 @@ Contact
 - change to 20ms
 - constantly changing frequency
 - V-F line, power as function of voltage
+- 80ms RAPL and short-term offset (10W)
+- Change LR
