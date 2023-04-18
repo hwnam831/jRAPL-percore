@@ -332,8 +332,8 @@ public class LocalController{
         }
         
 
-        double totalcap = (Integer)res.get("cap")
-        double lr = (Double)res.get("lr")
+        double totalcap = (Integer)res.get("cap");
+        double lr = (Double)res.get("lr");
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"));
         double[] curpl = pt.curpl.clone();
         float[] powerusage = new float[curpl.length];
