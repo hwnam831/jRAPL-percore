@@ -11,7 +11,7 @@ CXX_DEFINES = -DUSE_C10D_GLOO -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE
 CXX_INCLUDES = -isystem $(TORCHDIR)/include -isystem $(TORCHDIR)/include/torch/csrc/api/include
 CXX_FLAGS = -D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++14
 
-all: install EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class LocalController.class microbench
+all: install EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class MLModel.class LocalController.class microbench
 
 matmul:
 	gcc -O3 -o matmul matrix-mul-pthread.c -lpthread

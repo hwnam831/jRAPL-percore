@@ -297,6 +297,8 @@ class PowerControllerThread extends Thread{
     
 }  
 public class LocalController{
+    public final double lr_max = 2.0;
+    public final double lr_min = -2.0;
     public static String arrToStr(float[] arr){
         return Arrays.toString(arr).replace('[', ' ').replace(']',' ');
     }
@@ -308,15 +310,19 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "ml").setDefault("fair");
+                .choices("fair", "slurm", "ml", "localml").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(100).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(300).help("Control period in ms");
+                .setDefault(80).help("Control period in ms");
+        parser.addArgument("--lr").type(Double.class)
+                .setDefault(1.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
                 .setDefault(60).help("Time duration in seconds");
+        parser.addArgument("--tag").type(String.class)
+                .setDefault("").help("CSV filename tag");
         Namespace res;
         try{
             res = parser.parseArgs(args);
@@ -326,7 +332,8 @@ public class LocalController{
         }
         
 
-        
+        double totalcap = (Integer)res.get("cap")
+        double lr = (Double)res.get("lr")
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"));
         double[] curpl = pt.curpl.clone();
         float[] powerusage = new float[curpl.length];
@@ -334,8 +341,9 @@ public class LocalController{
         int sampleperiodms = (Integer)res.get("sampleperiod");
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         String policy = (String) res.get("policy");
+        String tag = (String) res.get("tag");
         TraceCollectorThread t = new TraceCollectorThread(16, sampleperiodms, policy 
-            + "_" + (Integer)res.get("cap") + "W.csv", timeperiodms);
+            +"_" + tag + "_" + (Integer)res.get("cap") + "W.csv", timeperiodms);
         int num_pkg = t.num_sockets;
         int core_per_pkg = t.threadNum/t.num_sockets;
         MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power.pt", "c220g2_bips.pt");
@@ -448,6 +456,12 @@ public class LocalController{
                 }
                 for (int i=0; i<newpl.length; i++){
                     newpl[i] += pool*edp_gradients[i]/grad_sum;
+                }
+
+            } else if (policy.equals("localml")){
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] = powerusage[i] + lr*edp_gradients[i];
+                    newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
                 }
 
             } else {
