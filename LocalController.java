@@ -460,7 +460,7 @@ public class LocalController{
 
             } else if (policy.equals("localml")){
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] + lr*edp_gradients[i];
+                    newpl[i] = (curpl[i] + powerusage[i])/2 + lr*edp_gradients[i];
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
                 }
 
