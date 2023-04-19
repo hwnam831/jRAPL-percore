@@ -312,7 +312,7 @@ public class LocalController{
         parser.addArgument("-p","--policy")
                 .choices("fair", "slurm", "ml", "localml").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
-                .setDefault(100).help("Power cap for this node");
+                .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
                 .setDefault(80).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
@@ -460,7 +460,7 @@ public class LocalController{
 
             } else if (policy.equals("localml")){
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = powerusage[i] + lr*edp_gradients[i];
+                    newpl[i] = curpl[i] + lr*edp_gradients[i];
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
                 }
 
