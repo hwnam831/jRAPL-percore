@@ -46,7 +46,8 @@ public class MLModel {
 	public static native void init(String fname_power, String fname_bips);
     //public static native void close();
     public static native float[] forward(float[] flat_input); // 4 power coefs + 2 bips coefs
-    
+    public float freq_max = 2.55/4.0f;
+    public float freq_min = 1.0/4.0f;
     public int num_pkg;
     public int num_core;
     public int num_counters;
@@ -140,7 +141,13 @@ public class MLModel {
                 float bips = bips_func[p][c].apply(freqs[p][c]);
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
-                grad_sum += 2*(bips/power)*(g_perf/g_power) - (bips*bips)/(power*power);
+                float grad = 2*(bips/power)*(g_perf/g_power) - (bips*bips)/(power*power);
+                if (grad < 0 && freqs[p][c] < freq_min){
+                    grad = 0;
+                } else if (grad > 0 && freqs[p][c] > freq_max){
+                    grad = 0;
+                }
+                grad_sum += grad;
             }
             gradients[p] = grad_sum;
         }

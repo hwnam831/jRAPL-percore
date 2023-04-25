@@ -210,6 +210,7 @@ JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
 	
 	uint32_t pl_raw = extractBitField(rawresult, 15, 0);
 	double timewindow = (1 << tw_Y) * (1.0 + tw_Z/4.0) * rapl_unit.time;
+	//printf("tw_Y: %d, tw_Z: %d, rapl_unit: %f", tw_Y, tw_Z, rapl_unit.time);
 	double powerval = enabled ? pl_raw*rapl_unit.power : -1;
 	limitinfo[0] = powerval;
 	limitinfo[1] = timewindow;
@@ -221,6 +222,7 @@ JNIEXPORT jdoubleArray JNICALL Java_EnergyCheckUtils_GetPkgLimit
 	pl_raw = extractBitField(rawresult, 15, 32);
 	timewindow = (1 << tw_Y) * (1.0 + tw_Z/4.0) * rapl_unit.time;
 	powerval = enabled ? pl_raw*rapl_unit.power : -1;
+	//printf("tw_Y: %d, tw_Z: %d, rapl_unit: %f", tw_Y, tw_Z, rapl_unit.time);
 	limitinfo[2] = powerval;
 	limitinfo[3] = timewindow;
 
@@ -237,6 +239,23 @@ JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetPkgLimit
 	uint64_t rawmsr = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
 	putBitField(pl_raw2, &rawmsr, 15, 32);
 	putBitField(pl_raw1, &rawmsr, 15, 0);
+	write_msr(fd[socketid*num_pkg_core], MSR_PKG_POWER_LIMIT, rawmsr);
+}
+
+//org tw_Y: 10, time unit: 1/1024, tw_Z = 0
+JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetRAPLTimeWindow
+(JNIEnv *env, jclass jcls, jint socketid, jint limitms){
+	uint32_t time_unit = (uint32_t)((limitms*1024)/1000);
+	uint32_t tw_Y = 0;
+	while (time_unit >= 2){
+		tw_Y++;
+		time_unit = time_unit >> 1;
+	}
+	float remain = (float)time_unit / (1<<tw_Y);
+	uint32_t tw_Z = (int)((remain - 1)*4);
+	uint64_t rawmsr = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
+	putBitField(tw_Y, &rawmsr, 5, 17);
+	putBitField(tw_Z, &rawmsr, 2, 22);
 	write_msr(fd[socketid*num_pkg_core], MSR_PKG_POWER_LIMIT, rawmsr);
 }
 

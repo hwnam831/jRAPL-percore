@@ -228,11 +228,14 @@ class PowerControllerThread extends Thread{
     double[] pl1;
     double[] pl2;
     double[] curpl;
+    public final double default_pl1 = 105.0;
+    public final double default_pl2 = 126.0;
+    public final int default_timewindow = 1000;
     int num_sockets;
     boolean running = true;
     String policy;
     public static final int port = 1234;
-    public PowerControllerThread(double powerlimit){
+    public PowerControllerThread(double powerlimit, int timeperiod){
 
         num_sockets = EnergyCheckUtils.GetSocketNum();
         pl1 = new double[num_sockets];
@@ -245,8 +248,10 @@ class PowerControllerThread extends Thread{
             curpl[s] = powerlimit / num_sockets;
 		    System.err.println("Power limit1 of pkg " + s + ": " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
 		    System.err.println("Power limit2 of pkg " + s + ": " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
-            System.err.println("Trying to set short term limit to " + curpl[s] + "W");
-			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]);
+            System.err.println("Trying to set running average timewindow to " + timeperiod/2 + "ms");
+            EnergyCheckUtils.SetRAPLTimeWindow(s, timeperiod/2);
+            System.err.println("Trying to set running average limit to " + curpl[s] + "W");
+			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]*1.2);
         }
         
 
@@ -291,7 +296,8 @@ class PowerControllerThread extends Thread{
         for (int s = 0; s<num_sockets; s++){
             
             System.err.println("Reverting back to original limit");
-			EnergyCheckUtils.SetPkgLimit(s, pl1[s], pl2[s]);
+			EnergyCheckUtils.SetPkgLimit(s, default_pl1, default_pl2);
+            EnergyCheckUtils.SetRAPLTimeWindow(s, default_timewindow);
         }
     }
     
@@ -334,11 +340,12 @@ public class LocalController{
 
         double totalcap = (Integer)res.get("cap");
         double lr = (Double)res.get("lr");
-        PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"));
-        double[] curpl = pt.curpl.clone();
-        float[] powerusage = new float[curpl.length];
         int timeperiodms = (Integer)res.get("period");
         int sampleperiodms = (Integer)res.get("sampleperiod");
+        PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms);
+        double[] curpl = pt.curpl.clone();
+        float[] powerusage = new float[curpl.length];
+       
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         String policy = (String) res.get("policy");
         String tag = (String) res.get("tag");

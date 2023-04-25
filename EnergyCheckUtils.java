@@ -49,6 +49,7 @@ public class EnergyCheckUtils {
 	public native static double[] GetPkgLimit(int socketid);
 	// Set the short-term limit (powerlimit2)
 	public native static void SetPkgLimit(int socketid, double limit1, double limit2);
+	public native static void SetRAPLTimeWindow(int socketid, int limitms);
 	public native static double GetDramEnergy(int socketid);
 	public native static String EnergyStatCheck();
 	public native static void ProfileDealloc();
