@@ -46,8 +46,8 @@ public class MLModel {
 	public static native void init(String fname_power, String fname_bips);
     //public static native void close();
     public static native float[] forward(float[] flat_input); // 4 power coefs + 2 bips coefs
-    public float freq_max = 2.55/4.0f;
-    public float freq_min = 1.0/4.0f;
+    public float freq_max = 2.55f/4;
+    public float freq_min = 1.0f/4;
     public int num_pkg;
     public int num_core;
     public int num_counters;
@@ -115,14 +115,11 @@ public class MLModel {
         return power;
     }
 
-    public float[] predict_perf(float[][] freqs){
-        float[] perf = new float[this.num_pkg];
-        //for (int pkg=0; pkg<this.num_pkg; pkg++){
-        //    power[pkg] = power_bias[pkg];
-        //}
+    public float[][] predict_perf(float[][] freqs){
+        float[][] perf = new float[this.num_pkg][this.num_core];
         for (int pkg=0; pkg<this.num_pkg; pkg++){
             for (int core=0; core<this.num_core; core++){
-                perf[pkg] += bips_func[pkg][core].apply(freqs[pkg][core]);
+                perf[pkg][core] = bips_bias[pkg][core] + bips_func[pkg][core].apply(freqs[pkg][core]);
             }
         }
         return perf;
@@ -137,8 +134,8 @@ public class MLModel {
         for (int p=0; p<this.num_pkg; p++){
             float grad_sum = 0.0f;
             for (int c=0; c<this.num_core; c++){
-                float power = power_func[p][c].apply(freqs[p][c]);
-                float bips = bips_func[p][c].apply(freqs[p][c]);
+                float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
+                float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
                 float grad = 2*(bips/power)*(g_perf/g_power) - (bips*bips)/(power*power);
@@ -211,6 +208,13 @@ public class MLModel {
         for (int i=0; i<power_bias.length; i++){
             power_bias[i] = (1-adaptive_lr) * power_bias[i] +
                 adaptive_lr*(actual[i] - prediction[i]);
+        }
+    }
+    public void update_perf_bias(float[][] actual, float[][] prediction){
+        for (int i=0; i<bips_bias.length; i++){
+            for (int j=0; j<bips_bias[0].length; j++)
+            bips_bias[i][j] = (1-adaptive_lr) * bips_bias[i][j] +
+                adaptive_lr*(actual[i][j] - prediction[i][j]);
         }
     }
     public static void main(String[] args){

@@ -363,7 +363,8 @@ public class LocalController{
         }
         float[] predictions = new float[num_pkg];
         float[] curperf = new float[num_pkg];
-        float[] perfpredictions = new float[num_pkg];
+        float[][] core_bips = new float[num_pkg][core_per_pkg];
+        float[][] perfpredictions = new float[num_pkg][core_per_pkg];
         for (int epc = 0; epc < epochs; epc++){
             try{
                 Thread.sleep(timeperiodms);
@@ -397,8 +398,10 @@ public class LocalController{
                 
                 curperf[i] = 0;
 
-                for (int j=0; j<fctr.coreCtrs[i].length; j++){
-                    curperf[i] += fctr.coreCtrs[i][3];
+                for (int j=0; j<core_per_pkg; j++){
+                    
+                    core_bips[i][j] = t.moving_input[i*core_per_pkg*9 + j*9 + 3];
+                    curperf[i] += core_bips[i][j];
                 }
 
             }
@@ -413,6 +416,7 @@ public class LocalController{
             t.lock.unlock();
             if(epc >= 1){
                 endmodel.update_bias(powerusage, predictions);
+                endmodel.update_perf_bias(core_bips, perfpredictions);
             }
             predictions = endmodel.predict_power(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
@@ -420,8 +424,15 @@ public class LocalController{
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
                 ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
+            float[] pkgbipspredictions = new float[num_pkg];
+            for (int pkg=0; pkg<t.num_sockets; pkg++){
+                pkgbipspredictions[pkg] = 0;
+                for (int core=0; core<core_per_pkg; core++){
+                    pkgbipspredictions[pkg] += perfpredictions[pkg][core];
+                }
+            }
             System.out.print(",Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
-                ",Bips Prediction," + Arrays.toString(perfpredictions).replace('[', ' ').replace(']',' '));
+                ",Bips Prediction," + Arrays.toString(pkgbipspredictions).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
             final double min_pool = 2.0;
