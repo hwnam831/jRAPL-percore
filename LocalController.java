@@ -316,7 +316,7 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "ml", "localml").setDefault("fair");
+                .choices("fair", "slurm", "ml", "localml", "ml1", "ml2", "ml3").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
@@ -327,6 +327,8 @@ public class LocalController{
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
                 .setDefault(60).help("Time duration in seconds");
+        parser.addArgument("--alpha").type(Double.class)
+                .setDefault(0.25).help("Adjustment rate to make PL and power closer");
         parser.addArgument("--tag").type(String.class)
                 .setDefault("").help("CSV filename tag");
         Namespace res;
@@ -339,6 +341,7 @@ public class LocalController{
         
 
         double totalcap = (Integer)res.get("cap");
+        double alpha = (Double)res.get("alpha");
         double lr = (Double)res.get("lr");
         int timeperiodms = (Integer)res.get("period");
         int sampleperiodms = (Integer)res.get("sampleperiod");
@@ -436,14 +439,14 @@ public class LocalController{
             double[] newpl = curpl.clone();
             double pool = 0.0;
             final double min_pool = 2.0;
-            double alpha = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
+            double beta = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
             if (policy.equals("slurm")){
                 for (int i = 0; i<curpl.length; i++){
                     double diff = curpl[i] - powerusage[i];
                     
                     if (diff > 0){
-                        pool += diff * 0.5 * alpha;
-                        newpl[i] -= diff*0.5*alpha;
+                        pool += diff * 0.5 * beta;
+                        newpl[i] -= diff*0.5*beta;
                     }
                 
                 }
@@ -478,8 +481,61 @@ public class LocalController{
 
             } else if (policy.equals("localml")){
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = (curpl[i] + powerusage[i])/2 + lr*edp_gradients[i];
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
+                }
+            
+            } else if (policy.equals("ml1")){
+                // Reduce equally if exceeds
+                double sum_newpl = 0;
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    sum_newpl += newpl[i];              
+                }
+                if (sum_newpl > totalcap){
+                    double delta = (sum_newpl - totalcap)/newpl.length;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] -= delta;      
+                    }
+                }
+
+            } else if (policy.equals("ml2")){
+                // Reduce equally if exceeds
+                double sum_newpl = 0;
+                double total_curpower = 0;
+                double grad_sum = 0;
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    sum_newpl += newpl[i];
+                    total_curpower += powerusage[i];
+                    grad_sum +=  edp_gradients[i];
+                }
+                if (sum_newpl > totalcap){
+                    double delta = totalcap - total_curpower;
+                    double newlr = delta / grad_sum;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] = powerusage[i] + newlr*edp_gradients[i];
+                    }
+                }
+
+            } else if (policy.equals("ml3")){
+                // Reduce equally if exceeds
+                double sum_newpl = 0;
+                double total_curpower = 0;
+                double grad_sum = 0;
+                double epsilon = 2.0;
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    sum_newpl += newpl[i];
+                    total_curpower += powerusage[i];
+                    grad_sum +=  edp_gradients[i];
+                }
+                if (sum_newpl > totalcap){
+                    double delta = totalcap - total_curpower + epsilon;
+                    double newlr = delta / grad_sum;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] = powerusage[i] + newlr*edp_gradients[i] - epsilon/newpl.length;
+                    }
                 }
 
             } else {
