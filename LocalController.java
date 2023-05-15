@@ -15,7 +15,7 @@ class PerfCounters{
     public float[][] pkgCtrs;
     public static final int freqRange = 4000000;
     public static final int tempRange = 90;
-    public static final float perNsMax = 40;
+    public static final float perNsMax = 100;
     public float[][] coreCtrs;
     public static boolean validate(boolean valid, float min, float max, float val){
         return valid && val > min-0.01 && val < max;
