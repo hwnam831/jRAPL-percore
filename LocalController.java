@@ -348,7 +348,7 @@ public class LocalController{
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms);
         double[] curpl = pt.curpl.clone();
         float[] powerusage = new float[curpl.length];
-       
+        double tolerance = 0.0;
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         String policy = (String) res.get("policy");
         String tag = (String) res.get("tag");
@@ -441,42 +441,39 @@ public class LocalController{
             final double min_pool = 2.0;
             double beta = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
             if (policy.equals("slurm")){
+                 double total_curpower = 0;
                 for (int i = 0; i<curpl.length; i++){
                     double diff = curpl[i] - powerusage[i];
-                    
+                    total_curpower += powerusage[i];
                     if (diff > 0){
                         pool += diff * 0.5 * beta;
                         newpl[i] -= diff*0.5*beta;
+                        
                     }
                 
                 }
+                tolerance = (tolerance + totalcap - total_curpower)*0.5;
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] += pool / newpl.length;
+                    newpl[i] += (tolerance + pool) / newpl.length;
                 }
             } else if (policy.equals("ml")){
-                for (int i = 0; i<curpl.length; i++){
-                    double diff = curpl[i] - powerusage[i];
-                    
-                    if (diff > 0){
-                        pool += 0.5*diff;
-                        newpl[i] -= 0.5*diff;
+                double sum_newpl = 0;
+                double total_curpower = 0;
+                double grad_sum = 0;
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    sum_newpl += newpl[i];
+                    total_curpower += powerusage[i];
+                    grad_sum +=  edp_gradients[i];
+                }
+                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+
+                if (sum_newpl > totalcap + tolerance){
+                    double delta = totalcap + tolerance - total_curpower;
+                    double newlr = delta / grad_sum;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] = powerusage[i] + newlr*edp_gradients[i];
                     }
-                
-                }
-                if (pool < min_pool) {
-                    double extra_pool = min_pool - pool;
-                    pool = min_pool;
-                    for (int i=0; i<newpl.length; i++){
-                        newpl[i] -= extra_pool/newpl.length;
-                    }
-                }
-                
-                float grad_sum = 0;
-                for (float g: edp_gradients){
-                    grad_sum += g;
-                }
-                for (int i=0; i<newpl.length; i++){
-                    newpl[i] += pool*edp_gradients[i]/grad_sum;
                 }
 
             } else if (policy.equals("localml")){
@@ -510,8 +507,10 @@ public class LocalController{
                     total_curpower += powerusage[i];
                     grad_sum +=  edp_gradients[i];
                 }
-                if (sum_newpl > totalcap){
-                    double delta = totalcap - total_curpower;
+                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+
+                if (sum_newpl > totalcap + tolerance){
+                    double delta = totalcap + tolerance - total_curpower;
                     double newlr = delta / grad_sum;
                     for (int i = 0; i<newpl.length; i++){
                         newpl[i] = powerusage[i] + newlr*edp_gradients[i];
