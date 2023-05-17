@@ -410,9 +410,12 @@ public class LocalController{
             }
             endmodel.inference(t.moving_input);
             float[][] freqs = new float[num_pkg][core_per_pkg];
+            float[] avgfreqs = new float[num_pkg];
             for (int pkg=0; pkg<t.num_sockets; pkg++){
+                avgfreqs[pkg] = 0;
                 for (int core=0; core<core_per_pkg; core++){
                     freqs[pkg][core] = fctr.coreCtrs[core + pkg*core_per_pkg][1];
+                    avgfreqs[pkg] += PerfCounters.freqRange*freqs[pkg][core]/core_per_pkg;
 
                 }
             }
@@ -425,6 +428,7 @@ public class LocalController{
             perfpredictions = endmodel.predict_perf(freqs);
             float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
+                "Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
                 ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
             float[] pkgbipspredictions = new float[num_pkg];
