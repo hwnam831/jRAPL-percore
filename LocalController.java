@@ -452,7 +452,7 @@ public class LocalController{
                     }
                 
                 }
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] += (tolerance + pool) / newpl.length;
                 }

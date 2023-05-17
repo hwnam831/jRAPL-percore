@@ -51,7 +51,7 @@ uint64_t read_msr(int fd, uint64_t which) {
 	uint64_t data = 0;
 
 	if ( pread(fd, &data, sizeof data, which) != sizeof data ) {
-	  printf("pread error!\n");
+	  fprintf(stderr, "pread error!\n");
 	}
 	
 	return data;
@@ -59,7 +59,7 @@ uint64_t read_msr(int fd, uint64_t which) {
 
 void write_msr(int fd, uint64_t which, uint64_t limit_info) {
 	if ( pwrite(fd, &limit_info , sizeof limit_info, which) != sizeof limit_info) 
-	  printf("pwrite error!\n");
+	  fprintf(stderr, "pwrite error!\n");
 }
 
 double calc_time_window(uint64_t Y, uint64_t F) {
