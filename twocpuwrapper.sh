@@ -1,0 +1,12 @@
+./twocpuexp.sh slurm base64 rnn_serving $1;
+./twocpuexp.sh slurm ml_training base64 $1;
+./twocpuexp.sh slurm cnn_serving image_rotate $1;
+./twocpuexp.sh slurm lr_serving primes $1;
+./twocpuexp.sh slurm linpack cnn_serving $1;
+./twocpuexp.sh slurm matmul video_processing $1;
+./twocpuexp.sh ml base64 rnn_serving $1;
+./twocpuexp.sh ml ml_training base64 $1;
+./twocpuexp.sh ml cnn_serving image_rotate $1;
+./twocpuexp.sh ml lr_serving primes $1;
+./twocpuexp.sh ml linpack cnn_serving $1;
+./twocpuexp.sh ml matmul video_processing $1;

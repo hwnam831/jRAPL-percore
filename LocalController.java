@@ -428,7 +428,7 @@ public class LocalController{
             perfpredictions = endmodel.predict_perf(freqs);
             float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
-                "Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
+                ",Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
                 ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
             float[] pkgbipspredictions = new float[num_pkg];
