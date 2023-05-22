@@ -251,7 +251,7 @@ class PowerControllerThread extends Thread{
             System.err.println("Trying to set running average timewindow to " + timeperiod/2 + "ms");
             EnergyCheckUtils.SetRAPLTimeWindow(s, timeperiod/2);
             System.err.println("Trying to set running average limit to " + curpl[s] + "W");
-			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]*1.2);
+			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]+20);
         }
         
 
