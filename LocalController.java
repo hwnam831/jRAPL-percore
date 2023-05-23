@@ -303,8 +303,11 @@ class PowerControllerThread extends Thread{
     
 }  
 public class LocalController{
-    public final double lr_max = 2.0;
-    public final double lr_min = -2.0;
+    public static final double lr_max = 2.0;
+    public static final double lr_min = -2.0;
+    public static final float grad_max = 5.0f;
+    public static final double power_min = 17;
+    public static final double power_max = 105;
     public static String arrToStr(float[] arr){
         return Arrays.toString(arr).replace('[', ' ').replace(']',' ');
     }
@@ -490,13 +493,40 @@ public class LocalController{
                 // Reduce equally if exceeds
                 double sum_newpl = 0;
                 for (int i = 0; i<newpl.length; i++){
+                    if (edp_gradients[i] > grad_max){
+                        edp_gradients[i] = grad_max;
+                    } else if (edp_gradients[i] < -grad_max){
+                        edp_gradients[i] = -grad_max;
+                    }
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    if (newpl[i] > power_max){
+                        newpl[i] = power_max;
+                    } else if (newpl[i] < power_min){
+                        newpl[i] = power_min;
+                    }
                     sum_newpl += newpl[i];              
                 }
+                double remainder = 0;
+                int eff_len = newpl.length;
+                double[] coefs = new double[newpl.length];
                 if (sum_newpl > totalcap){
                     double delta = (sum_newpl - totalcap)/newpl.length;
                     for (int i = 0; i<newpl.length; i++){
-                        newpl[i] -= delta;      
+                        newpl[i] -= delta;
+                        if (newpl[i] < power_min){
+                            remainder += power_min - newpl[i];
+                            eff_len--;
+                            newpl[i] = power_min;
+                            coefs[i] = 0;
+                        }else{
+                            coefs[i] = 1;
+                        }
+                    }
+                    for (int i = 0; i<newpl.length; i++){
+                        if(eff_len <= 0){
+                            break;
+                        }
+                        newpl[i] -= coefs[i]*remainder/eff_len;
                     }
                 }
 
@@ -526,7 +556,7 @@ public class LocalController{
                 double sum_newpl = 0;
                 double total_curpower = 0;
                 double grad_sum = 0;
-                double epsilon = 2.0;
+                double epsilon = 2.0 * newpl.length;
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
                     sum_newpl += newpl[i];
