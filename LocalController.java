@@ -429,7 +429,7 @@ public class LocalController{
             }
             predictions = endmodel.predict_power(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
-            float[] edp_gradients = endmodel.getEDPGradients(freqs); // gradients per socket
+            float[] edp_gradients = endmodel.getLocalEDPGradients(freqs); // gradients per socket
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
                 ",Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
@@ -532,6 +532,7 @@ public class LocalController{
 
             } else if (policy.equals("ml2")){
                 // Reduce equally if exceeds
+                edp_gradients = endmodel.getGlobalEDPGradients(freqs);
                 double sum_newpl = 0;
                 double total_curpower = 0;
                 double grad_sum = 0;

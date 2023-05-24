@@ -124,7 +124,7 @@ public class MLModel {
         }
         return perf;
     }
-    public float[] getEDPGradients(float[][] freqs){
+    public float[] getLocalEDPGradients(float[][] freqs){
         float[] gradients = new float[this.num_pkg];
         
         //float[][] grad_power = new float[this.num_pkg][this.num_core];
@@ -139,6 +139,37 @@ public class MLModel {
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
                 float grad = 2*(bips/power)*(g_perf/g_power) - (bips*bips)/(power*power);
+                if (grad < 0 && freqs[p][c] < freq_min){
+                    grad = 0;
+                } else if (grad > 0 && freqs[p][c] > freq_max){
+                    grad = 0;
+                }
+                grad_sum += grad;
+            }
+            gradients[p] = grad_sum;
+        }
+        //1/E*D = B^2/P  G(B^2/P) = 2*B/P * (dB/df)*(df/dP) - B^2/P^2
+
+        return gradients;
+    }
+    public float[] getGlobalEDPGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        float totalbips = 0.0f;
+        float totalpower = 0.0f;
+        for (int p=0; p<this.num_pkg; p++){
+            for (int c=0; c<this.num_core; c++){
+                float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
+                float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
+                totalpower += power;
+                totalbips += bips;
+            }
+        }
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            for (int c=0; c<this.num_core; c++){
+                float g_power = power_func[p][c].derivative(freqs[p][c]);
+                float g_perf = bips_func[p][c].derivative(freqs[p][c]);
+                float grad = 2*(totalbips/totalpower)*(g_perf/g_power) - (totalbips*totalbips)/(totalpower*totalpower);
                 if (grad < 0 && freqs[p][c] < freq_min){
                     grad = 0;
                 } else if (grad > 0 && freqs[p][c] > freq_max){
