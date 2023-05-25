@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 sheetnames = []
 for fname in os.listdir():
     if fname[-4:] == '.csv':
@@ -12,6 +13,7 @@ def postprocess(csvfile):
                   df.columns[19]:'powerlimit:0', df.columns[20]:'powerlimit:1',df.columns[22]:'newlimit:0', df.columns[23]:'newlimit:1'})
     df['B2/W:0'] = df['bips:0']*df['bips:0']/df['power:0']
     df['B2/W:1'] = df['bips:1']*df['bips:1']/df['power:1']
+    df['B2/W:global'] = (df['bips:0']+df['bips:1'])**2/(df['power:1']+df['power:0'])
     for i in range(len(df)-100,0,-1):
         if df['B2/W:0'][i] > 2.0 or df['B2/W:1'][i] > 2.0:
             print(i)
