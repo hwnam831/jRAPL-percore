@@ -13,8 +13,3 @@
 ./twocpuexp.sh ml1 lr_serving primes $1;
 ./twocpuexp.sh ml1 linpack cnn_serving $1;
 ./twocpuexp.sh ml1 matmul video_processing $1;
-./twocpuexp.sh ml2 image_rotate ml_training $1;
-./twocpuexp.sh ml2 cnn_serving image_rotate $1;
-./twocpuexp.sh ml2 lr_serving primes $1;
-./twocpuexp.sh ml2 linpack cnn_serving $1;
-./twocpuexp.sh ml2 matmul video_processing $1;
