@@ -175,7 +175,7 @@ public class MLModel {
                 } else if (grad > 0 && freqs[p][c] > freq_max){
                     grad = 0;
                 }
-                grad_sum += grad;
+                grad_sum += grad/this.num_pkg;
             }
             gradients[p] = grad_sum;
         }
