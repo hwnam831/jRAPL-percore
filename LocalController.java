@@ -323,7 +323,7 @@ public class LocalController{
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(80).help("Control period in ms");
+                .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
                 .setDefault(1.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
@@ -362,6 +362,7 @@ public class LocalController{
         MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power.pt", "c220g2_bips.pt");
         t.start();
         pt.start();
+
         try{
         Thread.sleep(timeperiodms);
         } catch (Exception e){
@@ -371,12 +372,21 @@ public class LocalController{
         float[] curperf = new float[num_pkg];
         float[][] core_bips = new float[num_pkg][core_per_pkg];
         float[][] perfpredictions = new float[num_pkg][core_per_pkg];
+        long curtimems = java.lang.System.currentTimeMillis();
+        long basetime = curtimems;
+        long nextPeriod = curtimems + timeperiodms;
         for (int epc = 0; epc < epochs; epc++){
+
+            
+            curtimems = java.lang.System.currentTimeMillis();
             try{
-                Thread.sleep(timeperiodms);
+                Thread.sleep(nextPeriod - curtimems);
+
             } catch (Exception e){
-                    
+                System.err.println("error in sleep");
             }
+            nextPeriod = nextPeriod + timeperiodms;
+            //System.err.println(nextPeriod - basetime);
             if (t.perfCounters.size() < 4){
                 continue;
             }
@@ -574,12 +584,12 @@ public class LocalController{
 
             } else {
                 System.out.println(",Cur power limit," + arrToStr(curpl) +
-                ",New power limit," + arrToStr(newpl));
+                ",New power limit," + arrToStr(newpl) + ",Time," + (curtimems-basetime));
                 continue; //Assume fair policy
             }
             
             System.out.println(",Cur power limit," + arrToStr(curpl) +
-                ",New power limit," + arrToStr(newpl));
+                ",New power limit," + arrToStr(newpl) + ",Time," + (curtimems-basetime));
             try{
                 
                 Socket s = new Socket("localhost", PowerControllerThread.port);
