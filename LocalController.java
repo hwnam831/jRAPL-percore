@@ -502,12 +502,19 @@ public class LocalController{
             } else if (policy.equals("ml1")){
                 // Reduce equally if exceeds
                 double sum_newpl = 0;
+                double grad_sum=0;
                 for (int i = 0; i<newpl.length; i++){
-                    if (edp_gradients[i] > grad_max){
-                        edp_gradients[i] = grad_max;
-                    } else if (edp_gradients[i] < -grad_max){
-                        edp_gradients[i] = -grad_max;
-                    }
+                    grad_sum += edp_gradients[i];              
+                }
+                if (grad_sum > grad_max){
+                    lr = grad_max/grad_sum;
+                } else if(grad_sum < -grad_max){
+                    lr = -grad_max/grad_sum;
+                } else {
+                    lr = 1;
+                }
+                for (int i = 0; i<newpl.length; i++){
+                    
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
                     if (newpl[i] > power_max){
                         newpl[i] = power_max;
