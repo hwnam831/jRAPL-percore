@@ -503,8 +503,10 @@ public class LocalController{
                 // Reduce equally if exceeds
                 double sum_newpl = 0;
                 double grad_sum=0;
+                double total_curpower = 0;
                 for (int i = 0; i<newpl.length; i++){
-                    grad_sum += edp_gradients[i];              
+                    grad_sum += edp_gradients[i];
+                    total_curpower += powerusage[i];              
                 }
                 if (grad_sum > grad_max){
                     lr = grad_max/grad_sum;
@@ -513,6 +515,7 @@ public class LocalController{
                 } else {
                     lr = 1;
                 }
+                tolerance = (tolerance + totalcap - total_curpower)*0.5;
                 for (int i = 0; i<newpl.length; i++){
                     
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
@@ -526,8 +529,8 @@ public class LocalController{
                 double remainder = 0;
                 int eff_len = newpl.length;
                 double[] coefs = new double[newpl.length];
-                if (sum_newpl > totalcap){
-                    double delta = (sum_newpl - totalcap)/newpl.length;
+                if (sum_newpl > totalcap + tolerance){
+                    double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
                     for (int i = 0; i<newpl.length; i++){
                         newpl[i] -= delta;
                         if (newpl[i] < power_min){
@@ -581,8 +584,9 @@ public class LocalController{
                     total_curpower += powerusage[i];
                     grad_sum +=  edp_gradients[i];
                 }
-                if (sum_newpl > totalcap){
-                    double delta = totalcap - total_curpower + epsilon;
+                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                if (sum_newpl > totalcap + tolerance){
+                    double delta = totalcap + tolerance - total_curpower + epsilon;
                     double newlr = delta / grad_sum;
                     for (int i = 0; i<newpl.length; i++){
                         newpl[i] = powerusage[i] + newlr*edp_gradients[i] - epsilon/newpl.length;
