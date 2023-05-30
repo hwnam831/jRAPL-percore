@@ -319,7 +319,7 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "ml", "localml", "ml1", "ml2", "ml3").setDefault("fair");
+                .choices("fair", "slurm", "slurm2", "ml", "localml", "ml1", "ml2", "ml3").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
@@ -473,6 +473,24 @@ public class LocalController{
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] += (tolerance + pool) / newpl.length;
                 }
+            } else if (policy.equals("slurm2")){
+                double total_curpower = 0;
+                for (int i = 0; i<curpl.length; i++){
+                    double diff = curpl[i] - powerusage[i];
+                    total_curpower += powerusage[i];
+                    if (diff > 0){
+                        pool += diff * 0.5 * beta;
+                        newpl[i] -= diff*0.5*beta;
+                        
+                    }
+                
+                }
+                
+                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] += (tolerance + pool) / newpl.length;
+                }
+
             } else if (policy.equals("ml")){
                 double sum_newpl = 0;
                 double total_curpower = 0;
