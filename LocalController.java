@@ -485,8 +485,12 @@ public class LocalController{
                     }
                 
                 }
+                if (totalcap - total_curpower > 0){
+                    tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                } else {
+                    tolerance = tolerance * 0.5;
+                }
                 
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] += (tolerance + pool) / newpl.length;
                 }
@@ -533,7 +537,11 @@ public class LocalController{
                 } else {
                     lr = 1;
                 }
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                if (totalcap - total_curpower > 0){
+                    tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                } else {
+                    tolerance = tolerance * 0.5;
+                }
                 for (int i = 0; i<newpl.length; i++){
                     
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
