@@ -251,7 +251,13 @@ class PowerControllerThread extends Thread{
             System.err.println("Trying to set running average timewindow to " + timeperiod/2 + "ms");
             EnergyCheckUtils.SetRAPLTimeWindow(s, timeperiod/2);
             System.err.println("Trying to set running average limit to " + curpl[s] + "W");
-			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]*1.1);
+			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]*1.2);
+            limitinfo = EnergyCheckUtils.GetPkgLimit(s);
+            pl1[s] = limitinfo[0];
+            pl2[s] = limitinfo[2];
+            curpl[s] = powerlimit / num_sockets;
+		    System.err.println("Power limit1 of pkg " + s + ": " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
+		    System.err.println("Power limit2 of pkg " + s + ": " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
         }
         
 

@@ -245,15 +245,19 @@ JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetPkgLimit
 //org tw_Y: 10, time unit: 1/1024, tw_Z = 0
 JNIEXPORT void JNICALL Java_EnergyCheckUtils_SetRAPLTimeWindow
 (JNIEnv *env, jclass jcls, jint socketid, jint limitms){
+	uint64_t rawmsr = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
+	
 	uint32_t time_unit = (uint32_t)((limitms*1024)/1000);
 	uint32_t tw_Y = 0;
 	while (time_unit >= 2){
 		tw_Y++;
 		time_unit = time_unit >> 1;
 	}
-	float remain = (float)time_unit / (1<<tw_Y);
-	uint32_t tw_Z = (int)((remain - 1)*4);
-	uint64_t rawmsr = getRAPLInfo(socketid, MSR_PKG_POWER_LIMIT);
+	float remain = (float)((limitms*1024)/1000) / (1<<tw_Y);
+	uint32_t tw_Z = (uint32_t)((remain-1)*4);
+	tw_Z = tw_Z < 0 ? 0: tw_Z;
+	tw_Z = tw_Z > 3 ? 3: tw_Z;
+	//fprintf(stderr,"Rapl unit time: %f, twy: %d, time_unit: %d, remain: %f, twz: %d\n",rapl_unit.time, tw_Y, time_unit, remain, tw_Z);
 	putBitField(tw_Y, &rawmsr, 5, 17);
 	putBitField(tw_Z, &rawmsr, 2, 22);
 	write_msr(fd[socketid*num_pkg_core], MSR_PKG_POWER_LIMIT, rawmsr);

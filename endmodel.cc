@@ -55,7 +55,7 @@ JNIEXPORT jfloatArray JNICALL Java_MLModel_forward
     auto bips_coefs = bipsmodule.forward(inputs);
     //std::cout << power_coefs << std::endl;
     auto stacked = torch::concat({power_coefs.toTensor(), bips_coefs.toTensor()},4);
-    float *coefs = stacked.data<float>();
+    float *coefs = stacked.data_ptr<float>();
     jfloatArray arr = env->NewFloatArray(2*10*6);
     env->SetFloatArrayRegion(arr, 0, 2*10*6, coefs);
     return arr;
