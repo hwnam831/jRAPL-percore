@@ -319,7 +319,7 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "slurm2", "ml", "localml", "ml1", "ml2", "ml3").setDefault("fair");
+                .choices("fair", "slurm", "slurm2", "ml", "localml", "ml1", "ml2", "ml3").setDefault("localml");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
