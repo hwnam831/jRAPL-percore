@@ -92,6 +92,7 @@ class TraceCollectorThread extends Thread{
     public float[] moving_power;
     private int tracecount;
     public int traceWindow;
+    public int curduration;
     private boolean running = true;
     boolean verbose = false;
     String csvfile;
@@ -119,6 +120,7 @@ class TraceCollectorThread extends Thread{
         }
         perfCounters = new ArrayDeque<PerfCounters>();
         this.tracecount = 0;
+        //voltage,freq,temp,inst,cycle and counters
         moving_input = new float[threadNum*9];
         moving_power = new float[num_sockets];
         for (int i=0; i<moving_power.length; i++){
@@ -161,8 +163,8 @@ class TraceCollectorThread extends Thread{
         try {
 
             fwriter = new PrintWriter(new FileOutputStream(csvfile));
-            String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
-            String[] ctrs = counters.split(",");
+            //String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
+            //String[] ctrs = counters.split(",");
 		    String firstLine = "Time(ms),Duration(ms)";
             for (int i=0; i<num_sockets; i++){
                 firstLine += after[i].headerCSV();
@@ -195,13 +197,14 @@ class TraceCollectorThread extends Thread{
             PerfCounters ctr = new PerfCounters(before, after);
 
             String curline = ""+after[0].time + ","+ (after[0].time-before[0].time);
-
+            
             for (int i=0; i<num_sockets; i++){
                 curline += after[i].CSVString(before[i]);
             }
             fwriter.println(curline + "," + ctr.valid);
             
             lock.lock();
+            curduration = (int)(after[0].time-before[0].time);
             if (ctr.valid) {
                 perfCounters.add(ctr);
                 tracecount++;
@@ -276,7 +279,7 @@ class PowerControllerThread extends Thread{
                     DataInputStream din=new DataInputStream(s.getInputStream());  
                     DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
                     
-                    String str="",str2="";
+                    String str="";
                     str=din.readUTF();
                     //System.out.println("client says: "+str);
                     String [] pls = str.split(",", curpl.length);
@@ -329,9 +332,9 @@ public class LocalController{
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(128).help("Control period in ms");
+                .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
-                .setDefault(1.0).help("Gradient-to-powercap rate");
+                .setDefault(0.5).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
@@ -376,7 +379,10 @@ public class LocalController{
         }
         float[] predictions = new float[num_pkg];
         float[] curperf = new float[num_pkg];
+        float[] curutil = new float[num_pkg];
         float[][] core_bips = new float[num_pkg][core_per_pkg];
+        float[][] core_cycles = new float[num_pkg][core_per_pkg]; // cycles per ms
+        float[][] core_util = new float[num_pkg][core_per_pkg]; // cycles per ms
         float[][] perfpredictions = new float[num_pkg][core_per_pkg];
         long curtimems = java.lang.System.currentTimeMillis();
         long basetime = curtimems;
@@ -397,7 +403,7 @@ public class LocalController{
                 continue;
             }
             t.lock.lock();
-            String l = "";
+
             PerfCounters fctr = t.perfCounters.peekFirst();
             /** 
             for (int i = 0; i<powerusage.length; i++){
@@ -419,11 +425,15 @@ public class LocalController{
             for (int i = 0; i<curperf.length; i++){
                 
                 curperf[i] = 0;
-
+                curutil[i] = 0;
                 for (int j=0; j<core_per_pkg; j++){
                     
                     core_bips[i][j] = t.moving_input[i*core_per_pkg*9 + j*9 + 3];
+                    
+                    core_cycles[i][j] = t.moving_input[i*core_per_pkg*9 + j*9 + 4];//Already bcps
+                    core_util[i][j] = core_cycles[i][j]*1e6f/PerfCounters.freqRange/t.moving_input[i*core_per_pkg*9 + j*9 + 1];
                     curperf[i] += core_bips[i][j];
+                    curutil[i] += core_util[i][j]/core_per_pkg;
                 }
 
             }
@@ -432,9 +442,11 @@ public class LocalController{
             float[] avgfreqs = new float[num_pkg];
             for (int pkg=0; pkg<t.num_sockets; pkg++){
                 avgfreqs[pkg] = 0;
+                
                 for (int core=0; core<core_per_pkg; core++){
                     freqs[pkg][core] = fctr.coreCtrs[core + pkg*core_per_pkg][1];
                     avgfreqs[pkg] += PerfCounters.freqRange*freqs[pkg][core]/core_per_pkg;
+                    
 
                 }
             }
@@ -445,12 +457,15 @@ public class LocalController{
             }
             predictions = endmodel.predict_power(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
-            float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs); // gradients per socket
+            float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs, core_util); // gradients per socket
             if (policy.equals("localml")){
-                edp_gradients = endmodel.getLocalEDPGradients(freqs);
+                edp_gradients = endmodel.getLocalEDPGradients(freqs, core_util);
             }
+            
+
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
                 ",Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
+                ",Util," + Arrays.toString(curutil).replace('[', ' ').replace(']',' ') +
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
                 ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
             float[] pkgbipspredictions = new float[num_pkg];
@@ -464,13 +479,13 @@ public class LocalController{
                 ",Bips Prediction," + Arrays.toString(pkgbipspredictions).replace('[', ' ').replace(']',' '));
             double[] newpl = curpl.clone();
             double pool = 0.0;
-            final double min_pool = 2.0;
+            //final double min_pool = 2.0;
             double beta = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
             if (policy.equals("slurm")){
-                 double total_curpower = 0;
+                //double total_curpower = 0;
                 for (int i = 0; i<curpl.length; i++){
                     double diff = curpl[i] - powerusage[i];
-                    total_curpower += powerusage[i];
+                    //total_curpower += powerusage[i];
                     if (diff > 0){
                         pool += diff * 0.5 * beta;
                         newpl[i] -= diff*0.5*beta;
@@ -524,6 +539,9 @@ public class LocalController{
             } else if (policy.equals("localml")){
                 //edp_gradients = endmodel.getLocalEDPGradients(freqs); // gradients per socket
                 for (int i = 0; i<newpl.length; i++){
+                    float grad = edp_gradients[i];
+                    grad = grad > 10 ? 10 : grad;
+                    grad = grad < -10 ? -10 : grad;
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
                 }
@@ -581,7 +599,7 @@ public class LocalController{
 
             } else if (policy.equals("ml2")){
                 // Reduce equally if exceeds
-                edp_gradients = endmodel.getLocalEDPGradients(freqs);
+                edp_gradients = endmodel.getLocalEDPGradients(freqs, core_util);
                 double sum_newpl = 0;
                 double total_curpower = 0;
                 double grad_sum = 0;

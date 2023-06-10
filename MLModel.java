@@ -152,7 +152,7 @@ public class MLModel {
 
         return gradients;
     }
-    public float[] getLocalEDPGradients(float[][] freqs){
+    public float[] getLocalEDPGradients(float[][] freqs, float[][] util){
         float[] gradients = new float[this.num_pkg];
         
         //float[][] grad_power = new float[this.num_pkg][this.num_core];
@@ -161,13 +161,15 @@ public class MLModel {
         //float[][] val_perf = new float[this.num_pkg][this.num_core];
         for (int p=0; p<this.num_pkg; p++){
             float grad_sum = 0.0f;
-            float pkgbips = 0.0f;
+            float pkgbips = 0.1f;
             float pkgpower = 0.0f;
+            float pkgutil = 0.0f;
             for (int c=0; c<this.num_core; c++){
                 float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
                 pkgpower += power;
-                float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
+                float bips = bips_func[p][c].apply(freqs[p][c]);
                 pkgbips += bips;
+                pkgutil += util[p][c];
             }
             for (int c=0; c<this.num_core; c++){
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
@@ -178,10 +180,18 @@ public class MLModel {
                 } else if (grad > 0 && freqs[p][c] > freq_max){
                     grad = 0;
                 }
-                grad_sum += grad;
+                if (grad > 10.0){
+                    grad = grad * 1;
+                }
+                grad_sum += grad* util[p][c];
+                
             }
+            
             //gradients[p] = grad_sum*this.num_core/(pkgbips*pkgbips);
-            gradients[p] = grad_sum;
+            gradients[p] = grad_sum*pkgutil/this.num_core; // normalize by utilization
+            if (gradients[p] > 10.0 || gradients[p] < -10.0){
+                grad_sum = grad_sum * 1.0f;
+            }
         }
         //E*D = P/B^2  G(E*D) = N/B^2 * (2*P/B * (dB/df)*(df/dP) - 1)
 
@@ -218,17 +228,20 @@ public class MLModel {
 
         return gradients;
     }
-    public float[] getGlobalEDPGradients(float[][] freqs){
+    public float[] getGlobalEDPGradients(float[][] freqs, float[][] util){
         float[] gradients = new float[this.num_pkg];
         float totalbips = 0.0f;
         float totalpower = 0.0f;
+        float util_sum = 0.0f;
         for (int p=0; p<this.num_pkg; p++){
             for (int c=0; c<this.num_core; c++){
                 float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
                 float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
                 totalpower += power;
                 totalbips += bips;
+                util_sum += util[p][c];
             }
+            
         }
         for (int p=0; p<this.num_pkg; p++){
             float grad_sum = 0.0f;
@@ -243,7 +256,7 @@ public class MLModel {
                 }
                 grad_sum += grad/this.num_pkg;
             }
-            gradients[p] = grad_sum;
+            gradients[p] = grad_sum * util_sum * util_sum;
         }
         //E*D = P/B^2  G(E*D) = alpha * (2*P/B * (dB/df)*(df/dP) - 1)
 
