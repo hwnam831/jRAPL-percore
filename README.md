@@ -138,3 +138,4 @@ Contact
 - V-F line, power as function of voltage
 - 80ms RAPL and short-term offset (10W)
 - Change LR
+- med-term RAPL limit doesn't work?

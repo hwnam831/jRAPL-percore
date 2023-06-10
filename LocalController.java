@@ -249,9 +249,9 @@ class PowerControllerThread extends Thread{
 		    System.err.println("Power limit1 of pkg " + s + ": " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
 		    System.err.println("Power limit2 of pkg " + s + ": " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
             System.err.println("Trying to set running average timewindow to " + timeperiod/2 + "ms");
-            EnergyCheckUtils.SetRAPLTimeWindow(s, timeperiod);
+            EnergyCheckUtils.SetRAPLTimeWindow(s, timeperiod/2);
             System.err.println("Trying to set running average limit to " + curpl[s] + "W");
-			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]+20);
+			EnergyCheckUtils.SetPkgLimit(s, curpl[s], curpl[s]*1.1);
         }
         
 
@@ -323,7 +323,7 @@ public class LocalController{
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(100).help("Control period in ms");
+                .setDefault(128).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
                 .setDefault(1.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
@@ -440,6 +440,9 @@ public class LocalController{
             predictions = endmodel.predict_power(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
             float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs); // gradients per socket
+            if (policy.equals("localml")){
+                edp_gradients = endmodel.getLocalEDPGradients(freqs);
+            }
             System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
                 ",Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
                 ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
@@ -513,6 +516,7 @@ public class LocalController{
                 }
 
             } else if (policy.equals("localml")){
+                //edp_gradients = endmodel.getLocalEDPGradients(freqs); // gradients per socket
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
