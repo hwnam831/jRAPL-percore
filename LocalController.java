@@ -517,22 +517,53 @@ public class LocalController{
                 }
 
             } else if (policy.equals("ml")){
+                // Reduce equally if exceeds
                 double sum_newpl = 0;
+                double grad_sum=0;
                 double total_curpower = 0;
-                double grad_sum = 0;
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
-                    sum_newpl += newpl[i];
-                    total_curpower += powerusage[i];
-                    grad_sum +=  edp_gradients[i];
+                    grad_sum += edp_gradients[i];
+                    total_curpower += powerusage[i];              
+                }
+                if (grad_sum > grad_max){
+                    lr = grad_max/grad_sum;
+                } else if(grad_sum < -grad_max){
+                    lr = -grad_max/grad_sum;
+                } else {
+                    lr = 1;
                 }
                 tolerance = (tolerance + totalcap - total_curpower)*0.5;
-
+                for (int i = 0; i<newpl.length; i++){
+                    
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    if (newpl[i] > power_max){
+                        newpl[i] = power_max;
+                    } else if (newpl[i] < power_min){
+                        newpl[i] = power_min;
+                    }
+                    sum_newpl += newpl[i];              
+                }
+                double remainder = 0;
+                int eff_len = newpl.length;
+                double[] coefs = new double[newpl.length];
                 if (sum_newpl > totalcap + tolerance){
-                    double delta = totalcap + tolerance - total_curpower;
-                    double newlr = delta / grad_sum;
+                    double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
                     for (int i = 0; i<newpl.length; i++){
-                        newpl[i] = powerusage[i] + newlr*edp_gradients[i];
+                        newpl[i] -= delta;
+                        if (newpl[i] < power_min){
+                            remainder += power_min - newpl[i];
+                            eff_len--;
+                            newpl[i] = power_min;
+                            coefs[i] = 0;
+                        }else{
+                            coefs[i] = 1;
+                        }
+                    }
+                    for (int i = 0; i<newpl.length; i++){
+                        if(eff_len <= 0){
+                            break;
+                        }
+                        newpl[i] -= coefs[i]*remainder/eff_len;
                     }
                 }
 

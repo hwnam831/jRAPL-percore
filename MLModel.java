@@ -256,7 +256,7 @@ public class MLModel {
                 }
                 grad_sum += grad/this.num_pkg;
             }
-            gradients[p] = grad_sum * util_sum * util_sum;
+            gradients[p] = grad_sum * util_sum;
         }
         //E*D = P/B^2  G(E*D) = alpha * (2*P/B * (dB/df)*(df/dP) - 1)
 
