@@ -314,7 +314,7 @@ class PowerControllerThread extends Thread{
 public class LocalController{
     public static final double lr_max = 2.0;
     public static final double lr_min = -2.0;
-    public static final float grad_max = 5.0f;
+    public static final float grad_max = 10.0f;
     public static final double power_min = 17;
     public static final double power_max = 105;
     public static String arrToStr(float[] arr){
