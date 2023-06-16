@@ -167,7 +167,7 @@ public class MLModel {
             for (int c=0; c<this.num_core; c++){
                 float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
                 pkgpower += power;
-                float bips = bips_func[p][c].apply(freqs[p][c]);
+                float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
                 pkgbips += bips;
                 pkgutil += util[p][c];
             }
