@@ -124,19 +124,12 @@ Contact
 - ocr-img: 1.5
 
 ## TODO
-- LocalController w fair and slurm (Monday)
-- Experiment with MXContainer (fair and slurm) (Tuesday? Wednesday?)
-- JNI libtorch
-- ML local controller
 - Hierarchical controller at controller node
 - Online linear regression baseline?
-- BIPS prediction/adaptive?
 - B^2, B gradients
-- Idle exp collect again
-- change to 20ms
-- constantly changing frequency
-- V-F line, power as function of voltage
-- 80ms RAPL and short-term offset (10W)
 - Change LR
 - med-term RAPL limit doesn't work?
-- multiply utilization to delay
+- fix developer errors with mxcontainer
+- nomxcontroller edp experiments
+- change freq to see if there is a headspace
+- Time-averaging total bips/power
