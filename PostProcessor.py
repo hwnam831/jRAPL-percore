@@ -16,11 +16,12 @@ def postprocess(csvfile):
     df['B2/W:1'] = df['bips:1']*df['bips:1']/df['power:1']
     df['B2/W:global'] = (df['bips:0']+df['bips:1'])**2/(df['power:1']+df['power:0'])
     #
-    for i in range(len(df)-100,0,-1):
-        if df['B2/W:0'][i] > 2.0 or df['B2/W:1'][i] > 2.0:
-            print(i)
-            df = df.iloc[10:i+1]
-            break
+    #for i in range(len(df)-100,0,-1):
+    #    if df['B2/W:0'][i] > 2.0 or df['B2/W:1'][i] > 2.0:
+    #        print(i)
+    #        df = df.iloc[10:i+1]
+    #        break
+    df = df.iloc[100:300]
     df = df.set_index('timems')
     return df.drop(columns=['Cur power usage', 'Freq', 'Prediction', 'Gradients', 'Cur perf', 'Bips Prediction', 'New power limit', 'Cur power limit', 'Time'])
 

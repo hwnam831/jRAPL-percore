@@ -1,15 +1,11 @@
-./twocpuexp.sh ml high med $1;
-./twocpuexp.sh ml high low $1;
-./twocpuexp.sh ml med high $1;
-./twocpuexp.sh ml med med $1;
-./twocpuexp.sh ml low high $1;
-./twocpuexp.sh slurm high med $1;
-./twocpuexp.sh slurm high low $1;
-./twocpuexp.sh slurm med high $1;
-./twocpuexp.sh slurm med med $1;
-./twocpuexp.sh slurm low high $1;
-./twocpuexp.sh ml1 high med $1;
-./twocpuexp.sh ml1 high low $1;
-./twocpuexp.sh ml1 med high $1;
-./twocpuexp.sh ml1 med med $1;
-./twocpuexp.sh ml1 low high $1;
+#usage twocpuwrapper.sh POLICY PL
+ssh hwnam831@ow1 "cd /mydata/workspace/faas-profiler; ./WorkloadInvoker -c warmup.json" & sleep 90
+FUNCTIONS="base64 image_rotate linpack lr_serving matmul ml_training ocr-img primes rnn_serving video_processing"
+for f1 in $FUNCTIONS; do
+    for f2 in $FUNCTIONS; do
+        if [[ "$f1" != "$f2" ]]; then
+            bash twocpuexp.sh $1 $f1 $f2 $2
+        fi
+    done
+done 
+
