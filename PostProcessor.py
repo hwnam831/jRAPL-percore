@@ -21,7 +21,7 @@ def postprocess(csvfile):
     #        print(i)
     #        df = df.iloc[10:i+1]
     #        break
-    df = df.iloc[100:300]
+    df = df.iloc[100:600]
     df = df.set_index('timems')
     return df.drop(columns=['Cur power usage', 'Freq', 'Prediction', 'Gradients', 'Cur perf', 'Bips Prediction', 'New power limit', 'Cur power limit', 'Time'])
 
