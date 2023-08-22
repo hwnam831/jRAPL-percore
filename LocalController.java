@@ -592,8 +592,8 @@ public class LocalController{
                 }
 
             } else if (policy.equals("ml2")){
-                // Reduce equally if exceeds
-                edp_gradients = endmodel.getLocalEDPGradients(freqs);
+                // +-1 if exceeds
+                
                 double sum_newpl = 0;
                 double total_curpower = 0;
                 double grad_sum = 0;
@@ -604,12 +604,18 @@ public class LocalController{
                     grad_sum +=  edp_gradients[i];
                 }
                 tolerance = (tolerance + totalcap - total_curpower)*0.5;
-
+                tolerance = tolerance > 0 ? tolerance : 0;
+                float[] bips_grads = endmodel.getBIPSGradients(freqs);
+                float[] power_grads = endmodel.getPowerGradients(freqs);
                 if (sum_newpl > totalcap + tolerance){
                     double delta = totalcap + tolerance - total_curpower;
-                    double newlr = delta / grad_sum;
+                    float avg_grad = 0;
                     for (int i = 0; i<newpl.length; i++){
-                        newpl[i] = powerusage[i] + newlr*edp_gradients[i];
+                        avg_grad += bips_grads[i]/power_grads[i]/newpl.length;
+                    }
+                    for (int i = 0; i<newpl.length; i++){
+                        float adjust = bips_grads[i]/power_grads[i] > avg_grad ? 1 : -1;
+                        newpl[i] = powerusage[i] + delta/newpl.length + adjust;
                     }
                 }
 

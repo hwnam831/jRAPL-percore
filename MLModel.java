@@ -249,6 +249,58 @@ public class MLModel {
 
         return gradients;
     }
+
+    public float[] getBIPSGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        
+        //float[][] grad_power = new float[this.num_pkg][this.num_core];
+        //float[][] val_power = new float[this.num_pkg][this.num_core];
+        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
+        //float[][] val_perf = new float[this.num_pkg][this.num_core];
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            PolyFunc pkg_bips = new PolyFunc(1);
+            for (int c=0; c<this.num_core; c++){
+                float f = freqs[p][c];
+
+                float bips = bips_func[p][c].apply(f);
+                float g_perf = bips_func[p][c].derivative(f);
+                if (freqs[p][c] > freq_max){
+                    g_perf = 0;
+                }
+                grad_sum += g_perf;
+                pkg_bips.add(bips_func[p][c]);
+            }
+            //System.err.println("PKG " + p + " Perf:" + pkg_bips.polyString() + "\tPower:" + pkg_power.polyString());
+            gradients[p] = grad_sum;
+        }
+        //dB^2/dP = 2B*dB/df * df/dP
+
+        return gradients;
+    }
+    public float[] getPowerGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        
+        //float[][] grad_power = new float[this.num_pkg][this.num_core];
+        //float[][] val_power = new float[this.num_pkg][this.num_core];
+        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
+        //float[][] val_perf = new float[this.num_pkg][this.num_core];
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            for (int c=0; c<this.num_core; c++){
+                float f = freqs[p][c];
+                float power = power_func[p][c].apply(f);
+
+                float g_power = power_func[p][c].derivative(f);
+                grad_sum += g_power;
+            }
+            gradients[p] = grad_sum;
+        }
+        //d(B/P)/dP =(dB/df * df/dP)/P - B/P^2
+
+        return gradients;
+    }
+
     public float[] getEnergyGradients(float[][] freqs){
         float[] gradients = new float[this.num_pkg];
         
