@@ -325,7 +325,7 @@ public class LocalController{
         parser.addArgument("--period").type(Integer.class)
                 .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
-                .setDefault(1.0).help("Gradient-to-powercap rate");
+                .setDefault(2.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
