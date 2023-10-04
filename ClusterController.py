@@ -18,17 +18,26 @@ powerTargets = {}
 nodeStatuses = {}
 clusterPowerLimit = 120.0
 
+
+
 def ControllerServer(periodms, plimit):
+    global serverRunning
+    global clusterPowerLimit
+    global nodeStatuses
+    global lockStatus
+    global clients
+
     clusterPowerLimit = plimit
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serverSocket.bind(('0.0.0.0', myPort))
     serverSocket.listen(1)
-    while True:
-        time.sleep(periodms/1000)
+    while serverRunning:
+        #time.sleep(periodms/1000)
         (clientSocket, address) = serverSocket.accept()
         clientAddress = address[0]
         if clientAddress not in clients:
+            lockStatus.acquire()
             clients.append(clientAddress)
             for c in clients:
                 powerTargets[c] = clusterPowerLimit/len(clients)
@@ -38,54 +47,34 @@ def ControllerServer(periodms, plimit):
                 'BIPS' : 0.0,
                 'dBIPS/dPower' : 0.0
             }
-            print("New client at: " + str(clientAddress) + ". Now total " + str(len(clients)))
+            print("New client at: " + str(clientAddress) + " Now total " + str(len(clients)))
+            lockStatus.release()
+
         try:
             data_ = clientSocket.recv(1024)
             dataStr = data_.decode('UTF-8')
-            dataStrList = dataStr.split(',')
-            message = json.loads(dataStrList[-1])
-        except Exception as e:
-            print("Error 1 == " + str(dataStr) + " == " + str(e))
-            pass
-
-        lockStatus.acquire()
-        for func in list(mapFuncToSetCores):
-            container = mapFuncToContainers[func]
-            output = ((subprocess.check_output("docker ps -q -f id="+str(container), shell=True)).decode("utf-8"))[:-1]
+            print("Time = " + str(time.time()) + " From " + str(clientAddress) + " got " + dataStr[2:])
+            dataStrList = dataStr[2:].split(',')
+            print(dataStrList)
+            lockStatus.acquire()
+            nodeStatuses[clientAddress]['Consumption'] = float(dataStrList[0])
+            nodeStatuses[clientAddress]['BIPS'] = float(dataStrList[1])
+            nodeStatuses[clientAddress]['dBIPS/dPower'] = float(dataStrList[2])
+            lockStatus.release()
             
-            # The container has been deleted
-            if output == "":
-                delete_func(func)
-
-            # The container is still running
-            # To check if the container is safe to donate cores
-            '''
-            else:
-                try:
-                    configs = {"Q":"Safe?"}
-                    cmdQA = "docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' " + str(container)
-                    output = ((subprocess.check_output(cmdQA, shell=True)).decode("utf-8"))[:-1]
-                    while True:
-                        try:
-                            rsp = requests.post('http://' + str(output) + ':1111', json=configs)
-                            break
-                        except:
-                            pass
-                    isSafe = (json.loads(rsp.text))["Response"]
-                    mapFuncToRegions[func] = isSafe
-                except:
-                    pass
-                '''
-                
-        lockStatus.release()
+            
+            msg = "Limit:" + str(nodeStatuses[clientAddress]['Limit'])+"\n"
+            clientSocket.send(msg.encode(encoding="utf-8"))
+            clientSocket.close()
+        except Exception as e:
+            print("Error 1 == "  + str(e))
+            pass
+    serverSocket.close()
 
 
-
-threadChecker = threading.Thread(target=checkThread)
-threadChecker.start()
 
 if __name__ == '__main__':
     # Set bind address and port
-
+    ControllerServer(100,120)
     # Create a socket for receiving connections
     

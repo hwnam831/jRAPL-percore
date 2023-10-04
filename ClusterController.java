@@ -3,10 +3,10 @@ import java.io.*;
 import java.net.*; 
 import java.util.*;
 
-import net.sourceforge.argparse4j.*;
-import net.sourceforge.argparse4j.inf.ArgumentParser;
-import net.sourceforge.argparse4j.inf.ArgumentParserException;
-import net.sourceforge.argparse4j.inf.Namespace;
+//import net.sourceforge.argparse4j.*;
+//import net.sourceforge.argparse4j.inf.ArgumentParser;
+//import net.sourceforge.argparse4j.inf.ArgumentParserException;
+//import net.sourceforge.argparse4j.inf.Namespace;
 
 class NodeStatus{
     public double powerConsumption;
@@ -14,7 +14,7 @@ class NodeStatus{
     public double BIPS;
     public double dBdP; // dBIPS/dPower
 }
-
+/* 
 class ControllerServer extends Thread{
     int numInvokers;
     ArrayList<Socket> invokerClients; // send new power limits
@@ -83,7 +83,29 @@ class ControllerServer extends Thread{
     }
     
 }
+*/
 
 public class ClusterController{
+    public static void main(String[] args){
+        for (int i=0; i<100; i++){
+            try{
+                Thread.sleep(100);
+                Socket s = new Socket("localhost", 4545);
+                //DataInputStream din=new DataInputStream(s.getInputStream());  
+                //BufferedInputStream bin = new BufferedInputStream(s.getInputStream());
+                BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
+                String message = "55.2,13.3,4.3";
+                dout.writeUTF(message);
+                System.out.println(reader.readLine());
+                reader.close();
+                dout.close();
+                s.close();
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
+    }
 }
