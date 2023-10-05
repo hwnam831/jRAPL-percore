@@ -551,7 +551,7 @@ class PowerControllerThread extends Thread{
             while(running){
                 synchronized(curpl){
                     try{
-                        curpl.wait();
+                        curpl.wait(1000);
                         for (int i=0; i<curpl.numSocket; i++){
                             EnergyCheckUtils.SetPkgLimit(i, curpl.limits[i], curpl.limits[i]*pl2ratio);
                         }
