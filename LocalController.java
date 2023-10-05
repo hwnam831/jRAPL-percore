@@ -50,6 +50,31 @@ class CSVRecord {
     }
 }
 
+class HierarchicalAgent extends Thread{
+    public static void main(String[] args){
+        for (int i=0; i<100; i++){
+            try{
+                Thread.sleep(100);
+                Socket s = new Socket("10.10.1.1", 4545);
+                //DataInputStream din=new DataInputStream(s.getInputStream());  
+                //BufferedInputStream bin = new BufferedInputStream(s.getInputStream());
+                BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
+                String message = "55.2,13.3,4.3";
+                dout.writeUTF(message);
+                System.out.println(reader.readLine());
+                reader.close();
+                dout.close();
+                s.close();
+                
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+}
+
 public class LocalController{
     public static final double lr_max = 2.0;
     public static final double lr_min = -2.0;
@@ -97,7 +122,7 @@ public class LocalController{
         int timeperiodms = (Integer)res.get("period");
         int sampleperiodms = (Integer)res.get("sampleperiod");
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms);
-        double[] curpl = pt.curpl.clone();
+        double[] curpl = pt.curpl.limits.clone();
         float[] powerusage = new float[curpl.length];
         double tolerance = 0.0;
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
@@ -422,6 +447,12 @@ public class LocalController{
                     records.addRecord("Cur PL:" + pkg, curpl[pkg]);
                     records.addRecord("Next PL:" + pkg, newpl[pkg]);
                 }
+                synchronized(pt.curpl){
+                    for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
+                        pt.curpl.limits[pkg] = newpl[pkg];
+                    }
+                    pt.curpl.notify();
+                }
                 continue; //Assume fair policy
             }
             
@@ -431,8 +462,17 @@ public class LocalController{
             for (int pkg=0; pkg<t.num_sockets; pkg++){
                 records.addRecord("Cur PL:" + pkg, curpl[pkg]);
                 records.addRecord("Next PL:" + pkg, newpl[pkg]);
+                
             }
+            synchronized(pt.curpl){
+                for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
+                    pt.curpl.limits[pkg] = newpl[pkg];
+                }
+                pt.curpl.notify();
+            }
+            
             records.printCSV(System.out);
+            /*
             try{
                 
                 Socket s = new Socket("localhost", PowerControllerThread.port);
@@ -448,6 +488,9 @@ public class LocalController{
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            */
+            
+
 
             //System.out.println(l);
         }
@@ -462,4 +505,71 @@ public class LocalController{
         EnergyCheckUtils.ProfileDealloc();
         PerfCheckUtils.perfDisable();
     }
+}
+class PL{
+    public double[] limits;
+    public int numSocket;
+}
+class PowerControllerThread extends Thread{
+    double[] pl1;
+    double[] pl2;
+    //public double[] curpl;
+    public PL curpl;
+    static final double pl2ratio = 1.2;
+    public final double default_pl1 = 105.0;
+    public final double default_pl2 = 126.0;
+    public final int default_timewindow = 1000;
+    int num_sockets;
+    boolean running = true;
+    public PowerControllerThread(double powerlimit, int timeperiod){
+
+        num_sockets = EnergyCheckUtils.GetSocketNum();
+        pl1 = new double[num_sockets];
+        pl2 = new double[num_sockets];
+        curpl = new PL();
+        curpl.limits = new double[num_sockets];
+        curpl.numSocket = num_sockets;
+        for (int s = 0; s<num_sockets; s++){
+            double[] limitinfo = EnergyCheckUtils.GetPkgLimit(s);
+            pl1[s] = limitinfo[0];
+            pl2[s] = limitinfo[2];
+            curpl.limits[s] = powerlimit / num_sockets;
+		    System.err.println("Power limit1 of pkg " + s + ": " + limitinfo[0] + "\t timewindow1 :" + limitinfo[1]);
+		    System.err.println("Power limit2 of pkg " + s + ": " + limitinfo[2] + "\t timewindow2 :" + limitinfo[3]);
+            System.err.println("Trying to set running average timewindow to " + timeperiod + "ms");
+            EnergyCheckUtils.SetRAPLTimeWindow(s, timeperiod);
+            System.err.println("Trying to set running average limit to " + curpl.limits[s] + "W");
+			EnergyCheckUtils.SetPkgLimit(s, curpl.limits[s], curpl.limits[s]*pl2ratio);
+        }
+
+    }
+    public void terminate(){
+        running = false;
+    }
+    public void run(){
+        try{
+            while(running){
+                synchronized(curpl){
+                    try{
+                        curpl.wait();
+                        for (int i=0; i<curpl.numSocket; i++){
+                            EnergyCheckUtils.SetPkgLimit(i, curpl.limits[i], curpl.limits[i]*pl2ratio);
+                        }
+                        
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        for (int s = 0; s<num_sockets; s++){
+            
+            System.err.println("Reverting back to original limit");
+			EnergyCheckUtils.SetPkgLimit(s, default_pl1, default_pl2);
+            EnergyCheckUtils.SetRAPLTimeWindow(s, default_timewindow);
+        }
+    }
+    
 }

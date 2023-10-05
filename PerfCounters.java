@@ -217,7 +217,7 @@ class TraceCollectorThread extends Thread{
     }
     
 }  
- 
+ /*
 class PowerControllerThread extends Thread{
     double[] pl1;
     double[] pl2;
@@ -296,3 +296,4 @@ class PowerControllerThread extends Thread{
     }
     
 }
+*/
