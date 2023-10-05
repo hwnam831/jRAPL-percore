@@ -39,14 +39,15 @@ def ControllerServer(periodms, plimit):
         if clientAddress not in clients:
             lockStatus.acquire()
             clients.append(clientAddress)
-            for c in clients:
-                powerTargets[c] = clusterPowerLimit/len(clients)
+            
             nodeStatuses[clientAddress] = {
                 'Limit' : clusterPowerLimit/len(clients),
                 'Consumption' : clusterPowerLimit/len(clients),
                 'BIPS' : 0.0,
                 'dBIPS/dPower' : 0.0
             }
+            for c in clients:
+                nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
             print("New client at: " + str(clientAddress) + " Now total " + str(len(clients)))
             lockStatus.release()
 
