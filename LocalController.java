@@ -464,6 +464,7 @@ public class LocalController{
                 records.addRecord("Next PL:" + pkg, newpl[pkg]);
                 
             }
+            curpl = newpl;
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
                     pt.curpl.limits[pkg] = newpl[pkg];
