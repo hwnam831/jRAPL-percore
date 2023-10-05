@@ -548,23 +548,21 @@ class PowerControllerThread extends Thread{
         running = false;
     }
     public void run(){
-        try{
-            while(running){
-                synchronized(curpl){
-                    try{
-                        curpl.wait(1000);
-                        for (int i=0; i<curpl.numSocket; i++){
-                            EnergyCheckUtils.SetPkgLimit(i, curpl.limits[i], curpl.limits[i]*pl2ratio);
-                        }
-                        
-                    } catch (Exception e){
-                        e.printStackTrace();
+
+        while(running){
+            synchronized(curpl){
+                try{
+                    curpl.wait(1000);
+                    for (int i=0; i<curpl.numSocket; i++){
+                        EnergyCheckUtils.SetPkgLimit(i, curpl.limits[i], curpl.limits[i]*pl2ratio);
                     }
+                    
+                } catch (Exception e){
+                    System.err.println("Timeout. Retrying")
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
         for (int s = 0; s<num_sockets; s++){
             
             System.err.println("Reverting back to original limit");
