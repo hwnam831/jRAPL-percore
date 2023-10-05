@@ -90,7 +90,7 @@ public class ClusterController{
         for (int i=0; i<100; i++){
             try{
                 Thread.sleep(100);
-                Socket s = new Socket("localhost", 4545);
+                Socket s = new Socket("10.10.1.1", 4545);
                 //DataInputStream din=new DataInputStream(s.getInputStream());  
                 //BufferedInputStream bin = new BufferedInputStream(s.getInputStream());
                 BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
