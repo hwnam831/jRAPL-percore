@@ -162,7 +162,7 @@ public class LocalController{
         double total_curpower = 0;
         for (int epc = 0; epc < epochs; epc++){
 
-            
+            total_curpower = 0;
             curtimems = java.lang.System.currentTimeMillis();
             try{
                 Thread.sleep(nextPeriod - curtimems);
@@ -302,7 +302,7 @@ public class LocalController{
                     }
                 
                 }
-                tolerance = tolerance*0.9 + (totalcap - total_curpower)*0.1;
+                //tolerance = tolerance*0.9 + (totalcap - total_curpower)*0.1;
                 //System.out.print("Tolerance," + tolerance + ",");
                 
                 for (int i = 0; i<newpl.length; i++){
@@ -319,8 +319,8 @@ public class LocalController{
                     total_curpower += powerusage[i];
                     grad_sum +=  edp_gradients[i];
                 }
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
-
+                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                //System.err.println("Tolerance:" + tolerance + ", cap:" + totalcap + "curpower:" + total_curpower);
                 if (sum_newpl > totalcap + tolerance){
                     double delta = totalcap + tolerance - total_curpower;
                     double newlr = delta / grad_sum;
@@ -358,7 +358,7 @@ public class LocalController{
                 } else {
                     lr = 1;
                 }
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
                 for (int i = 0; i<newpl.length; i++){
                     
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
@@ -405,8 +405,8 @@ public class LocalController{
                     total_curpower += powerusage[i];
                     grad_sum +=  edp_gradients[i];
                 }
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
-                tolerance = tolerance > 0 ? tolerance : 0;
+                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                //tolerance = tolerance > 0 ? tolerance : 0;
                 float[] bips_grads = endmodel.getBIPSGradients(freqs);
                 float[] power_grads = endmodel.getPowerGradients(freqs);
                 if (sum_newpl > totalcap + tolerance){
@@ -433,7 +433,7 @@ public class LocalController{
                     total_curpower += powerusage[i];
                     grad_sum +=  edp_gradients[i];
                 }
-                tolerance = (tolerance + totalcap - total_curpower)*0.5;
+                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
                 if (sum_newpl > totalcap + tolerance){
                     double delta = totalcap + tolerance - total_curpower + epsilon;
                     double newlr = delta / grad_sum;
