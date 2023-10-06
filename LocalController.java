@@ -107,6 +107,8 @@ public class LocalController{
                 .setDefault(0.25).help("Adjustment rate to make PL and power closer");
         parser.addArgument("--tag").type(String.class)
                 .setDefault("").help("CSV filename tag");
+        parser.addArgument("--parent").type(String.class)
+                .setDefault("10.10.1.1").help("Parent controller address");
         Namespace res;
         try{
             res = parser.parseArgs(args);
@@ -157,6 +159,7 @@ public class LocalController{
         long curtimems = java.lang.System.currentTimeMillis();
         long basetime = curtimems;
         long nextPeriod = curtimems + timeperiodms;
+        double total_curpower = 0;
         for (int epc = 0; epc < epochs; epc++){
 
             
@@ -272,7 +275,7 @@ public class LocalController{
             final double min_pool = 2.0;
             double beta = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
             if (policy.equals("slurm")){
-                 double total_curpower = 0;
+                
                 for (int i = 0; i<curpl.length; i++){
                     double diff = curpl[i] - powerusage[i];
                     total_curpower += powerusage[i];
@@ -288,7 +291,7 @@ public class LocalController{
                     newpl[i] += (tolerance + pool) / newpl.length;
                 }
             } else if (policy.equals("slurm2")){
-                double total_curpower = 0;
+                
                 for (int i = 0; i<curpl.length; i++){
                     double diff = curpl[i] - powerusage[i];
                     total_curpower += powerusage[i];
@@ -308,7 +311,7 @@ public class LocalController{
 
             } else if (policy.equals("ml")){
                 double sum_newpl = 0;
-                double total_curpower = 0;
+                
                 double grad_sum = 0;
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
@@ -343,7 +346,7 @@ public class LocalController{
                 // Reduce equally if exceeds
                 double sum_newpl = 0;
                 double grad_sum=0;
-                double total_curpower = 0;
+                
                 for (int i = 0; i<newpl.length; i++){
                     grad_sum += edp_gradients[i];
                     total_curpower += powerusage[i];              
@@ -394,7 +397,7 @@ public class LocalController{
                 // +-1 if exceeds
                 
                 double sum_newpl = 0;
-                double total_curpower = 0;
+                
                 double grad_sum = 0;
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
@@ -421,7 +424,7 @@ public class LocalController{
             } else if (policy.equals("ml3")){
                 // Reduce equally if exceeds
                 double sum_newpl = 0;
-                double total_curpower = 0;
+                
                 double grad_sum = 0;
                 double epsilon = 2.0 * newpl.length;
                 for (int i = 0; i<newpl.length; i++){
@@ -446,6 +449,7 @@ public class LocalController{
                 for (int pkg=0; pkg<t.num_sockets; pkg++){
                     records.addRecord("Cur PL:" + pkg, curpl[pkg]);
                     records.addRecord("Next PL:" + pkg, newpl[pkg]);
+                    total_curpower += powerusage[pkg];
                 }
                 synchronized(pt.curpl){
                     for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
@@ -468,28 +472,42 @@ public class LocalController{
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
                     pt.curpl.limits[pkg] = newpl[pkg];
+                    //pt.curpl.usages[pkg] = powerusage[pkg];
+                    //pt.curpl.bips[pkg] = curperf[pkg];
+                    //pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
                 }
                 pt.curpl.notify();
             }
             
             records.printCSV(System.out);
-            /*
+            
+            double totalBIPS = 0;
+            double totaldBdP = 0;
+            float[] bips_grads = endmodel.getBIPSGradients(freqs);
+            float[] power_grads = endmodel.getPowerGradients(freqs);
+            for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
+                    totalBIPS += curperf[pkg];
+                    totaldBdP += bips_grads[pkg]/(power_grads[pkg] + 1e-6);
+            }
+            String message = String.format("%f,%f,%f",total_curpower,totalBIPS,totaldBdP);
             try{
                 
-                Socket s = new Socket("localhost", PowerControllerThread.port);
-                DataInputStream din=new DataInputStream(s.getInputStream());  
-                DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
-                String message = Arrays.toString(newpl);
-                dout.writeUTF(message.substring(1,message.length()-1));
-                din.close();
+                Socket s = new Socket((String) res.get("parent"), 4545);
+                s.setSoTimeout(timeperiodms/2);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                DataOutputStream dout=new DataOutputStream(s.getOutputStream());   
+                dout.writeUTF(message);
+                String newPKGLimit = reader.readLine();
+                totalcap = Double.parseDouble(newPKGLimit.split(":")[1]);
+                reader.close();
                 dout.close();
                 s.close();
-                curpl = newpl;
                 
             } catch (Exception e) {
+                System.err.println("Cannot connect to cluster. Continuing...");
                 e.printStackTrace();
             }
-            */
+            
             
 
 
@@ -507,15 +525,25 @@ public class LocalController{
         PerfCheckUtils.perfDisable();
     }
 }
-class PL{
+class NodeStatus{
     public double[] limits;
+    public double[] usages;
     public int numSocket;
+    public double[] bips;
+    public double[] dBdP;
+    public NodeStatus(int num_sockets){
+        numSocket=num_sockets;
+        limits = new double[num_sockets];
+        usages = new double[num_sockets];
+        bips = new double[num_sockets];
+        dBdP = new double[num_sockets];
+    }
 }
 class PowerControllerThread extends Thread{
     double[] pl1;
     double[] pl2;
     //public double[] curpl;
-    public PL curpl;
+    public NodeStatus curpl;
     static final double pl2ratio = 1.2;
     public final double default_pl1 = 105.0;
     public final double default_pl2 = 126.0;
@@ -527,9 +555,8 @@ class PowerControllerThread extends Thread{
         num_sockets = EnergyCheckUtils.GetSocketNum();
         pl1 = new double[num_sockets];
         pl2 = new double[num_sockets];
-        curpl = new PL();
-        curpl.limits = new double[num_sockets];
-        curpl.numSocket = num_sockets;
+        curpl = new NodeStatus(num_sockets);
+        
         for (int s = 0; s<num_sockets; s++){
             double[] limitinfo = EnergyCheckUtils.GetPkgLimit(s);
             pl1[s] = limitinfo[0];
@@ -558,7 +585,7 @@ class PowerControllerThread extends Thread{
                     }
                     
                 } catch (Exception e){
-                    System.err.println("Timeout. Retrying")
+                    System.err.println("Timeout. Retrying");
                 }
             }
         }
