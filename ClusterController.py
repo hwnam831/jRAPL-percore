@@ -9,6 +9,7 @@ import signal
 import subprocess
 import re
 import random
+import argparse
 
 myPort = 4545
 serverRunning = True
@@ -20,7 +21,7 @@ clusterPowerLimit = 120.0
 
 
 
-def ControllerServer(periodms, plimit):
+def ControllerServer(policy, plimit):
     global serverRunning
     global clusterPowerLimit
     global nodeStatuses
@@ -75,7 +76,16 @@ def ControllerServer(periodms, plimit):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--policy", type=str, choices=["slurm,ml,sin"],
+                default='sin',help="policy")
+    parser.add_argument("-l", "--limit", type=float,
+                default='120',help="cluster power limit")
+    args=parser.parse_args()
     # Set bind address and port
-    ControllerServer(100,120)
+    global clusterPowerLimit
+    controllerserver = threading.Thread(target=ControllerServer,args=(args.policy, args.limit))
+    controllerserver.start()
+    #TODO: test sinusoidal
     # Create a socket for receiving connections
     
