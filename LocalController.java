@@ -108,7 +108,7 @@ public class LocalController{
         parser.addArgument("--tag").type(String.class)
                 .setDefault("").help("CSV filename tag");
         parser.addArgument("--parent").type(String.class)
-                .setDefault("10.10.1.1").help("Parent controller address");
+                .setDefault("").help("Parent controller address. Empty to run local control");
         Namespace res;
         try{
             res = parser.parseArgs(args);
@@ -490,22 +490,25 @@ public class LocalController{
                     totaldBdP += bips_grads[pkg]/(power_grads[pkg] + 1e-6);
             }
             String message = String.format("%f,%f,%f",total_curpower,totalBIPS,totaldBdP);
-            try{
-                
-                Socket s = new Socket((String) res.get("parent"), 4545);
-                s.setSoTimeout(timeperiodms/2);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                DataOutputStream dout=new DataOutputStream(s.getOutputStream());   
-                dout.writeUTF(message);
-                String newPKGLimit = reader.readLine();
-                totalcap = Double.parseDouble(newPKGLimit.split(":")[1]);
-                reader.close();
-                dout.close();
-                s.close();
-                
-            } catch (Exception e) {
-                System.err.println("Cannot connect to cluster. Continuing...");
-                e.printStackTrace();
+            String parentip = (String) res.get("parent");
+            if (!parentip.equals("")){
+                try{
+                    
+                    Socket s = new Socket(parentip, 4545);
+                    s.setSoTimeout(timeperiodms/2);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                    DataOutputStream dout=new DataOutputStream(s.getOutputStream());   
+                    dout.writeUTF(message);
+                    String newPKGLimit = reader.readLine();
+                    totalcap = Double.parseDouble(newPKGLimit.split(":")[1]);
+                    reader.close();
+                    dout.close();
+                    s.close();
+                    
+                } catch (Exception e) {
+                    System.err.println("Cannot connect to cluster. Continuing...");
+                    //e.printStackTrace();
+                }
             }
             
             

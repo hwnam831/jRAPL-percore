@@ -86,6 +86,8 @@ if __name__ == '__main__':
                 default='160',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
                 default='400',help="time period in milliseconds")
+    parser.add_argument("--duration", type=float,
+                default='-1',help="experiment duration in seconds")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
@@ -96,6 +98,9 @@ if __name__ == '__main__':
 
     nextTime = time.time() + args.periodms/1000
     counter = 0.0
+    deadline = None
+    if args.duration > 0:
+        deadline = time.time() + args.duration
     while serverRunning:
         counter = counter + 1
         lockStatus.acquire()
@@ -114,7 +119,8 @@ if __name__ == '__main__':
 
         time.sleep(sleeptime)
         nextTime = time.time() + args.periodms/1000
-
+        if deadline is not None and time.time() > deadline:
+            serverRunning = False
     print("controller stopped")
     controllerserver.join()
     #TODO: test sinusoidal

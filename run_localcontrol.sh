@@ -1,1 +1,2 @@
-sudo java -cp $PWD":"$PWD"/argparse4j-0.9.0.jar" LocalController --policy ml --duration 60 --cap 60
+#Usage run_.sh [policy] [duration] [cap]
+sudo java -cp $PWD":"$PWD"/argparse4j-0.9.0.jar" LocalController --policy $1 --duration $2 --cap $3 > local_$1_$3.csv
