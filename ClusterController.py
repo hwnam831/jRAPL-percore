@@ -1,15 +1,11 @@
-import requests
-import json
-import os
+import math
 import socket
 import time
 import threading
-import sys
-import signal
-import subprocess
-import re
-import random
 import argparse
+import signal
+import sys
+
 
 myPort = 4545
 serverRunning = True
@@ -19,23 +15,29 @@ powerTargets = {}
 nodeStatuses = {}
 clusterPowerLimit = 120.0
 
-
-
-def ControllerServer(policy, plimit):
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
     global serverRunning
-    global clusterPowerLimit
+    serverRunning = False
+
+def ControllerServer():
+
     global nodeStatuses
-    global lockStatus
     global clients
 
-    clusterPowerLimit = plimit
+    #clusterPowerLimit = plimit
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serverSocket.bind(('0.0.0.0', myPort))
     serverSocket.listen(1)
+    serverSocket.settimeout(1.0)
     while serverRunning:
         #time.sleep(periodms/1000)
-        (clientSocket, address) = serverSocket.accept()
+        try:
+            (clientSocket, address) = serverSocket.accept()
+        except:
+            #print("Server timeout. Continue")
+            continue
         clientAddress = address[0]
         if clientAddress not in clients:
             lockStatus.acquire()
@@ -71,6 +73,7 @@ def ControllerServer(policy, plimit):
         except Exception as e:
             print("Error 1 == "  + str(e))
             pass
+    print("server stopped")
     serverSocket.close()
 
 
@@ -80,12 +83,40 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--policy", type=str, choices=["slurm,ml,sin"],
                 default='sin',help="policy")
     parser.add_argument("-l", "--limit", type=float,
-                default='120',help="cluster power limit")
+                default='160',help="cluster power limit")
+    parser.add_argument("--periodms", type=float,
+                default='400',help="time period in milliseconds")
     args=parser.parse_args()
+    signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
-    global clusterPowerLimit
-    controllerserver = threading.Thread(target=ControllerServer,args=(args.policy, args.limit))
+
+    clusterPowerLimit = args.limit
+    controllerserver = threading.Thread(target=ControllerServer)
     controllerserver.start()
+
+    nextTime = time.time() + args.periodms/1000
+    counter = 0.0
+    while serverRunning:
+        counter = counter + 1
+        lockStatus.acquire()
+
+        if args.policy == "ml":
+            pass
+        elif args.policy == 'slurm':
+            pass
+        else: #sin
+            clusterPowerLimit = 3*args.limit/4 + args.limit * math.sin((counter/20) * 2 * math.pi)/4
+            print(clusterPowerLimit)
+            for c in clients:
+                nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
+        lockStatus.release()
+        sleeptime = max(nextTime - time.time(), 0.0001)
+
+        time.sleep(sleeptime)
+        nextTime = time.time() + args.periodms/1000
+
+    print("controller stopped")
+    controllerserver.join()
     #TODO: test sinusoidal
     # Create a socket for receiving connections
     
