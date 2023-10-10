@@ -76,7 +76,10 @@ def ControllerServer():
     print("server stopped")
     serverSocket.close()
 
-
+power_max = 200
+power_min = 35
+grad_max = 10.0
+alpha = 0.25
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -104,11 +107,64 @@ if __name__ == '__main__':
     while serverRunning:
         counter = counter + 1
         lockStatus.acquire()
-
+        totalbips = 0.0
+        totalpower = 0.0
+        b2p_grads = {}
+        for c in clients:
+            totalpower += nodeStatuses[c]['Consumption']
+            totalbips += nodeStatuses[c]['BIPS']
+        for c in clients:
+            b2p_grads[c] = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower'] - (totalbips/totalpower)*(totalbips/totalpower)
         if args.policy == "ml":
-            pass
+            sum_newpl = 0
+            grad_sum=0
+            
+            for c in clients:
+                grad_sum += b2p_grads[c]
+                
+            if grad_sum > grad_max:
+                lr = grad_max/grad_sum
+            elif grad_sum < -grad_max:
+                lr = -grad_max/grad_sum
+            else:
+                lr = 1
+
+            for c in clients:
+                curpl = nodeStatuses[c]['Limit']
+                newpl = curpl - alpha*(curpl - nodeStatuses[c]['Consumption']) + lr*b2p_grads[c]
+                newpl = max(power_min, newpl)
+                newpl = min(power_max, newpl)
+                sum_newpl += newpl
+                nodeStatuses[c]['Limit'] = newpl
+            remainder = 0
+            eff_len = len(clients)
+            coefs = {}
+            if sum_newpl > clusterPowerLimit:
+                delta = (sum_newpl - clusterPowerLimit)/len(clients)
+                for c in clients:
+                    newpl = nodeStatuses[c]['Limit'] - delta
+                    if newpl < power_min:
+                        remainder += power_min - newpl
+                        eff_len = eff_len -1
+                        newpl = power_min
+                        coefs[c] = 0
+                    else:
+                        coefs[c] = 1
+                    nodeStatuses[c]['Limit'] = newpl
+                for c in clients:
+                    if eff_len <= 0:
+                        break
+                    nodeStatuses[c]['Limit'] -= coefs[c]*remainder/eff_len
         elif args.policy == 'slurm':
-            pass
+            pool = 0.0
+            beta = len(clients) / (len(clients) - 0.99)
+            for c in clients:
+                diff = nodeStatuses[c]['Limit']-nodeStatuses[c]['Consumption']
+                if diff>0.0:
+                    pool += 0.5*diff* beta
+                    nodeStatuses[c]['Limit'] = nodeStatuses[c]['Limit'] - 0.5*diff* beta
+            for c in clients:
+                nodeStatuses[c]['Limit'] = nodeStatuses[c]['Limit'] + pool/len(clients)
         else: #sin
             clusterPowerLimit = 3*args.limit/4 + args.limit * math.sin((counter/40) * 2 * math.pi)/4
             print(clusterPowerLimit)

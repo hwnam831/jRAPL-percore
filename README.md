@@ -124,21 +124,10 @@ Contact
 - ocr-img: 1.5
 
 ## TODO
-- LocalController w fair and slurm (done)
-- Experiment with MXContainer (fair and slurm) (Done)
-- JNI libtorch (done)
-- ML local controller (done)
-- Hierarchical controller at controller node 
+- Hierarchical controller at controller node (current)
 - Online linear regression baseline?
-- BIPS prediction/adaptive?
 - B^2, B gradients
-- Idle exp collect again
-- change to 20ms
-- constantly changing frequency (done)
-- V-F line, power as function of voltage (done)
-- 80ms RAPL and short-term offset (10W) (done)
-- Change LR, tune ml (progress)
-- HH,HM,HL,MH,MM,ML,LH,LM,LL (no)
-- 55,50,45,40
-- better csv
 - ml2 with adaptive gradient
+- include DRAM power?
+- re-collect training traces with sinusoidal
+- re-train including dram power
