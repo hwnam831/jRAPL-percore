@@ -80,7 +80,7 @@ def ControllerServer():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--policy", type=str, choices=["slurm,ml,sin"],
+    parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin'],
                 default='sin',help="policy")
     parser.add_argument("-l", "--limit", type=float,
                 default='160',help="cluster power limit")
@@ -110,7 +110,7 @@ if __name__ == '__main__':
         elif args.policy == 'slurm':
             pass
         else: #sin
-            clusterPowerLimit = 3*args.limit/4 + args.limit * math.sin((counter/20) * 2 * math.pi)/4
+            clusterPowerLimit = 3*args.limit/4 + args.limit * math.sin((counter/40) * 2 * math.pi)/4
             print(clusterPowerLimit)
             for c in clients:
                 nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
