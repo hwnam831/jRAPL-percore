@@ -96,7 +96,7 @@ public class LocalController{
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(100).help("Control period in ms");
+                .setDefault(80).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
                 .setDefault(2.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
@@ -123,7 +123,7 @@ public class LocalController{
         double lr = (Double)res.get("lr");
         int timeperiodms = (Integer)res.get("period");
         int sampleperiodms = (Integer)res.get("sampleperiod");
-        PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms);
+        PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms, (String)res.get("parent"));
         double[] curpl = pt.curpl.limits.clone();
         float[] powerusage = new float[curpl.length];
         double tolerance = 0.0;
@@ -171,6 +171,7 @@ public class LocalController{
                 System.err.println("error in sleep");
             }
             nextPeriod = nextPeriod + timeperiodms;
+            totalcap = pt.totalcap;
             //System.err.println(nextPeriod - basetime);
             if (t.perfCounters.size() < 4){
                 continue;
@@ -469,51 +470,20 @@ public class LocalController{
                 
             }
             curpl = newpl;
+            float[] bips_grads = endmodel.getBIPSGradients(freqs);
+            float[] power_grads = endmodel.getPowerGradients(freqs);
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
                     pt.curpl.limits[pkg] = newpl[pkg];
-                    //pt.curpl.usages[pkg] = powerusage[pkg];
-                    //pt.curpl.bips[pkg] = curperf[pkg];
-                    //pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
+                    pt.curpl.usages[pkg] = powerusage[pkg];
+                    pt.curpl.bips[pkg] = curperf[pkg];
+                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
                 }
                 pt.curpl.notify();
             }
             
             records.printCSV(System.out);
             
-            double totalBIPS = 0;
-            double totaldBdP = 0;
-            float[] bips_grads = endmodel.getBIPSGradients(freqs);
-            float[] power_grads = endmodel.getPowerGradients(freqs);
-            for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
-                    totalBIPS += curperf[pkg];
-                    totaldBdP += bips_grads[pkg]/(power_grads[pkg] + 1e-6);
-            }
-            String message = String.format("%f,%f,%f",total_curpower,totalBIPS,totaldBdP);
-            String parentip = (String) res.get("parent");
-            if (!parentip.equals("")){
-                try{
-                    
-                    Socket s = new Socket(parentip, 4545);
-                    s.setSoTimeout(timeperiodms/2);
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                    DataOutputStream dout=new DataOutputStream(s.getOutputStream());   
-                    dout.writeUTF(message);
-                    String newPKGLimit = reader.readLine();
-                    totalcap = Double.parseDouble(newPKGLimit.split(":")[1]);
-                    reader.close();
-                    dout.close();
-                    s.close();
-                    
-                } catch (Exception e) {
-                    System.err.println("Cannot connect to cluster. Continuing...");
-                    //e.printStackTrace();
-                }
-            }
-            
-            
-
-
             //System.out.println(l);
         }
         try{
@@ -553,13 +523,17 @@ class PowerControllerThread extends Thread{
     public final int default_timewindow = 1000;
     int num_sockets;
     boolean running = true;
-    public PowerControllerThread(double powerlimit, int timeperiod){
-
+    String parentip;
+    double totalcap;
+    int timeperiodms;
+    public PowerControllerThread(double powerlimit, int timeperiod, String parentip){
+        timeperiodms=timeperiod;
         num_sockets = EnergyCheckUtils.GetSocketNum();
         pl1 = new double[num_sockets];
         pl2 = new double[num_sockets];
         curpl = new NodeStatus(num_sockets);
-        
+        this.parentip = parentip;
+        this.totalcap = powerlimit;
         for (int s = 0; s<num_sockets; s++){
             double[] limitinfo = EnergyCheckUtils.GetPkgLimit(s);
             pl1[s] = limitinfo[0];
@@ -591,6 +565,37 @@ class PowerControllerThread extends Thread{
                     System.err.println("Timeout. Retrying");
                 }
             }
+            double totalBIPS = 0;
+            double totaldBdP = 0;
+            double total_curpower = 0;
+            
+            for (int pkg=0; pkg<curpl.numSocket; pkg++){
+                    totalBIPS += curpl.bips[pkg];
+                    totaldBdP += curpl.dBdP[pkg];
+                    total_curpower += curpl.usages[pkg];
+            }
+            String message = String.format("%f,%f,%f",total_curpower,totalBIPS,totaldBdP);
+
+            if (!parentip.equals("")){
+                try{
+                    
+                    Socket s = new Socket(parentip, 4545);
+                    s.setSoTimeout(timeperiodms/2);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                    DataOutputStream dout=new DataOutputStream(s.getOutputStream());   
+                    dout.writeUTF(message);
+                    String newPKGLimit = reader.readLine();
+                    totalcap = Double.parseDouble(newPKGLimit.split(":")[1]);
+                    reader.close();
+                    dout.close();
+                    s.close();
+                    
+                } catch (Exception e) {
+                    System.err.println("Cannot connect to cluster. Continuing...");
+                    //e.printStackTrace();
+                }
+            }
+            
         }
 
         for (int s = 0; s<num_sockets; s++){
