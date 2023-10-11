@@ -91,9 +91,10 @@ power_max = 200
 power_min = 35
 grad_max = 10.0
 alpha = 0.25
+default_lr = 2.0
 
-def printcsv():
-    csvlines=[]
+def printcsv(starttime):
+    csvlines=[str(int((time.time()-starttime)*1000))]
     for c in clients:
         csvlines += [str(nodeStatuses[c]['Limit']),str(nodeStatuses[c]['Consumption']),
                      str(nodeStatuses[c]['BIPS']),str(nodeStatuses[c]['dBIPS/dPower'])]
@@ -102,8 +103,8 @@ def printcsv():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','const'],
-                default='const',help="policy")
+    parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','fair'],
+                default='fair',help="policy")
     parser.add_argument("-l", "--limit", type=float,
                 default='160',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
@@ -121,8 +122,9 @@ if __name__ == '__main__':
     nextTime = time.time() + args.periodms/1000
     counter = 0.0
     deadline = None
+    starttime = time.time()
     if args.duration > 0:
-        deadline = time.time() + args.duration
+        deadline = starttime + args.duration
     while serverRunning:
         sleeptime = max(nextTime - time.time(), 0.0001)
         time.sleep(sleeptime)
@@ -146,11 +148,11 @@ if __name__ == '__main__':
                 grad_sum += b2p_grads[c]
                 
             if grad_sum > grad_max:
-                lr = grad_max/grad_sum
+                lr = default_lr * grad_max/grad_sum 
             elif grad_sum < -grad_max:
-                lr = -grad_max/grad_sum
+                lr = -default_lr * grad_max/grad_sum
             else:
-                lr = 1
+                lr = default_lr
 
             for c in clients:
                 curpl = nodeStatuses[c]['Limit']
@@ -197,12 +199,12 @@ if __name__ == '__main__':
         else:
             pass
         lockStatus.release()
-        printcsv()
+        printcsv(starttime)
         if deadline is not None and time.time() > deadline:
             serverRunning = False
     print("controller stopped", file=sys.stderr)
     clientcount = 0
-    headerstr = []
+    headerstr = ['Time(ms)']
     for c in clients:
         clientcount += 1
         headerstr += ['Limit:' + str(clientcount),'Consumption:' + str(clientcount),
