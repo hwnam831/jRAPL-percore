@@ -129,11 +129,13 @@ if __name__ == '__main__':
         sleeptime = max(nextTime - time.time(), 0.0001)
         time.sleep(sleeptime)
         nextTime = time.time() + args.periodms/1000
+        if deadline is not None and time.time() > deadline:
+            serverRunning = False
         if len(clients) < 2:
             continue
         lockStatus.acquire()
         totalbips = 0.0
-        totalpower = 0.0
+        totalpower = 1e-6
         b2p_grads = {}
         for c in clients:
             totalpower += nodeStatuses[c]['Consumption']
@@ -196,12 +198,13 @@ if __name__ == '__main__':
             #print(clusterPowerLimit)
             for c in clients:
                 nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
+        elif args.policy == 'fair':
+            for c in clients:
+                nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
         else:
             pass
         lockStatus.release()
         printcsv(starttime)
-        if deadline is not None and time.time() > deadline:
-            serverRunning = False
     print("controller stopped", file=sys.stderr)
     clientcount = 0
     headerstr = ['Time(ms)']

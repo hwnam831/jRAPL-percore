@@ -504,14 +504,15 @@ public class LocalController{
                 float[] bips_grads = endmodel.getBIPSGradients(freqs);
                 float[] power_grads = endmodel.getPowerGradients(freqs);
                 synchronized(pt.curpl){
-                for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
-                    pt.curpl.limits[pkg] = newpl[pkg];
-                    pt.curpl.usages[pkg] = powerusage[pkg];
-                    pt.curpl.bips[pkg] = curperf[pkg];
-                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
-                }
+                    for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
+                        pt.curpl.limits[pkg] = newpl[pkg];
+                        pt.curpl.usages[pkg] = powerusage[pkg];
+                        pt.curpl.bips[pkg] = curperf[pkg];
+                        pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
+                    }
                 pt.curpl.notify();
-            }
+                }
+                records.printCSV(System.out);
                 continue; //Assume fair policy
             }
             
