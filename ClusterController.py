@@ -195,9 +195,10 @@ if __name__ == '__main__':
         elif args.policy == 'sin': #sin
             counter = counter + 1
             clusterPowerLimit = 3*args.limit/4 + args.limit * math.sin((counter/40) * 2 * math.pi)/4
+            mylimit = 100 + 60 * math.sin((counter/10) * math.pi)
             #print(clusterPowerLimit)
             for c in clients:
-                nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
+                nodeStatuses[c]['Limit'] = mylimit
         elif args.policy == 'fair':
             for c in clients:
                 nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)

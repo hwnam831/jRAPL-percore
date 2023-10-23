@@ -495,25 +495,11 @@ public class LocalController{
             } else {
                 //System.out.println(",Cur power limit," + arrToStr(curpl) +
                 //",New power limit," + arrToStr(newpl) + ",Time," + (curtimems-basetime));
-                records.addRecord("Time(ms)", curtimems-basetime);
-                for (int pkg=0; pkg<t.num_sockets; pkg++){
-                    records.addRecord("Cur PL:" + pkg, curpl[pkg]);
-                    records.addRecord("Next PL:" + pkg, newpl[pkg]);
-                    total_curpower += powerusage[pkg];
-                }
-                float[] bips_grads = endmodel.getBIPSGradients(freqs);
-                float[] power_grads = endmodel.getPowerGradients(freqs);
-                synchronized(pt.curpl){
-                    for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
-                        pt.curpl.limits[pkg] = newpl[pkg];
-                        pt.curpl.usages[pkg] = powerusage[pkg];
-                        pt.curpl.bips[pkg] = curperf[pkg];
-                        pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
+                for (int i = 0; i<newpl.length; i++){
+                        total_curpower += powerusage[i];
+                        newpl[i] = totalcap / newpl.length;
                     }
-                pt.curpl.notify();
-                }
-                records.printCSV(System.out);
-                continue; //Assume fair policy
+                 //Assume fair policy
             }
             
             //System.out.println(",Cur power limit," + arrToStr(curpl) +
