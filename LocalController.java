@@ -250,6 +250,7 @@ public class LocalController{
                 records.addRecord("BIPS:" + pkg, curperf[pkg]);
                 records.addRecord("BIPS Prediction:" + pkg, pkgbipspredictions[pkg]);
                 records.addRecord("Util:" + pkg, curutil[pkg]);
+                //records.addRecord("DRAM Bias:" + pkg, endmodel.dram_bias[pkg]);
                 
 
             }

@@ -56,6 +56,7 @@ public class MLModel {
     public PolyFunc[][] bips_func; // ax+b
     public float[] power_bias;
     public float[] dram_bias;
+    public final float dram_base = 10;
     public float[][] bips_bias;
     public static final float adaptive_lr = 0.5f;
     
@@ -125,7 +126,8 @@ public class MLModel {
     public float[] predict_dram(float[][] freqs){
         float[] power = new float[this.num_pkg];
         for (int pkg=0; pkg<this.num_pkg; pkg++){
-            power[pkg] = dram_bias[pkg];
+            power[pkg] = dram_bias[pkg] + dram_base;
+            //power[pkg] = 0;
         }
         for (int pkg=0; pkg<this.num_pkg; pkg++){
             for (int core=0; core<this.num_core; core++){
@@ -355,20 +357,20 @@ public class MLModel {
 
     public void update_bias(float[] actual, float[] prediction){
         for (int i=0; i<power_bias.length; i++){
-            power_bias[i] = (1-adaptive_lr) * power_bias[i] +
+            power_bias[i] = power_bias[i] +
                 adaptive_lr*(actual[i] - prediction[i]);
         }
     }
     public void update_dram_bias(float[] actual, float[] prediction){
         for (int i=0; i<dram_bias.length; i++){
-            dram_bias[i] = (1-adaptive_lr) * dram_bias[i] +
+            dram_bias[i] = dram_bias[i] +
                 adaptive_lr*(actual[i] - prediction[i]);
         }
     }
     public void update_perf_bias(float[][] actual, float[][] prediction){
         for (int i=0; i<bips_bias.length; i++){
             for (int j=0; j<bips_bias[0].length; j++)
-            bips_bias[i][j] = (1-adaptive_lr) * bips_bias[i][j] +
+            bips_bias[i][j] = bips_bias[i][j] +
                 adaptive_lr*(actual[i][j] - prediction[i][j]);
         }
     }
