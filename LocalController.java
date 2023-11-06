@@ -71,9 +71,9 @@ public class LocalController{
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(80).help("Control period in ms");
+                .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
-                .setDefault(2.0).help("Gradient-to-powercap rate");
+                .setDefault(4.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
@@ -288,7 +288,8 @@ public class LocalController{
                 } else {
                     lr = 1;
                 }
-
+                //
+                
                 for (int i = 0; i<newpl.length; i++){
                     
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
@@ -320,6 +321,18 @@ public class LocalController{
                             break;
                         }
                         newpl[i] -= coefs[i]*remainder/eff_len;
+                    }
+                }
+                //corner-case: minimum freq
+                if (avgfreqs[0] < 1e6 && newpl[0] < curpl[0] + 1){
+                    newpl[0] = curpl[0] + 1;
+                    if (newpl[0] + newpl[1] > totalcap){
+                        newpl[1] = totalcap - newpl[0];
+                    }
+                } else if (avgfreqs[1] < 1e6 && newpl[1] < curpl[1] + 1){
+                    newpl[1] = curpl[1] + 1;
+                    if (newpl[0] + newpl[1] > totalcap){
+                        newpl[0] = totalcap - newpl[1];
                     }
                 }
 

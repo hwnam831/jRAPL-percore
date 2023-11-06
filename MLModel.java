@@ -46,8 +46,8 @@ public class MLModel {
 	public static native void init(String fname_power, String fname_bips);
     //public static native void close();
     public static native float[] forward(float[] flat_input); // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
-    public float freq_max = 2.85f/4;
-    public float freq_min = 0.95f/4;
+    public float freq_max = 2.8f/4;
+    public float freq_min = 0.9f/4;
     public int num_pkg;
     public int num_core;
     public int num_counters;
