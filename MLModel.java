@@ -45,15 +45,17 @@ public class MLModel {
 
 	public static native void init(String fname_power, String fname_bips);
     //public static native void close();
-    public static native float[] forward(float[] flat_input); // 4 power coefs + 2 bips coefs
+    public static native float[] forward(float[] flat_input); // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
     public float freq_max = 2.85f/4;
     public float freq_min = 0.95f/4;
     public int num_pkg;
     public int num_core;
     public int num_counters;
     public PolyFunc[][] power_func; //3rd-order poly
+    public PolyFunc[][] dram_func; //3rd-order poly
     public PolyFunc[][] bips_func; // ax+b
     public float[] power_bias;
+    public float[] dram_bias;
     public float[][] bips_bias;
     public static final float adaptive_lr = 0.5f;
     
@@ -72,14 +74,18 @@ public class MLModel {
         this.num_counters = num_counters;
         init(fname_power, fname_bips);
         this.power_func = new PolyFunc[num_pkg][num_core];
+        this.dram_func = new PolyFunc[num_pkg][num_core];
         this.bips_func = new PolyFunc[num_pkg][num_core];
         this.power_bias = new float[num_pkg];
+        this.dram_bias = new float[num_pkg];
         this.bips_bias = new float[num_pkg][num_core];
         for (int p=0; p<num_pkg; p++){
             this.power_bias[p] = 0;
+            this.dram_bias[p] = 0;
             for (int c=0; c<num_core; c++){
                 this.bips_bias[p][c] = 0.0f;
                 this.power_func[p][c] = new PolyFunc(3);
+                this.dram_func[p][c] = new PolyFunc(1);
                 this.bips_func[p][c] = new PolyFunc(1);
             }
         }
@@ -90,12 +96,14 @@ public class MLModel {
         for (int p=0; p<this.num_pkg; p++){
             offset = p*this.num_core;
             for (int c=0; c<num_core; c++){
-                this.power_func[p][c].coef[0] = coefs[(offset+c)*6 + 0];
-                this.power_func[p][c].coef[1] = coefs[(offset+c)*6 + 1];
-                this.power_func[p][c].coef[2] = coefs[(offset+c)*6 + 2];
-                this.power_func[p][c].coef[3] = coefs[(offset+c)*6 + 3];
-                this.bips_func[p][c].coef[0] = coefs[(offset+c)*6 + 4];
-                this.bips_func[p][c].coef[1] = coefs[(offset+c)*6 + 5];
+                this.power_func[p][c].coef[0] = coefs[(offset+c)*8 + 0];
+                this.power_func[p][c].coef[1] = coefs[(offset+c)*8 + 1];
+                this.power_func[p][c].coef[2] = coefs[(offset+c)*8 + 2];
+                this.power_func[p][c].coef[3] = coefs[(offset+c)*8 + 3];
+                this.dram_func[p][c].coef[0] = coefs[(offset+c)*8 + 4];
+                this.dram_func[p][c].coef[1] = coefs[(offset+c)*8 + 5];
+                this.bips_func[p][c].coef[0] = coefs[(offset+c)*8 + 6];
+                this.bips_func[p][c].coef[1] = coefs[(offset+c)*8 + 7];
             }
         }
     }
@@ -114,6 +122,18 @@ public class MLModel {
         }
         return power;
     }
+    public float[] predict_dram(float[][] freqs){
+        float[] power = new float[this.num_pkg];
+        for (int pkg=0; pkg<this.num_pkg; pkg++){
+            power[pkg] = dram_bias[pkg];
+        }
+        for (int pkg=0; pkg<this.num_pkg; pkg++){
+            for (int core=0; core<this.num_core; core++){
+                power[pkg] += dram_func[pkg][core].apply(freqs[pkg][core]);
+            }
+        }
+        return power;
+    }
 
     public float[][] predict_perf(float[][] freqs){
         float[][] perf = new float[this.num_pkg][this.num_core];
@@ -124,21 +144,16 @@ public class MLModel {
         }
         return perf;
     }
-    public float[] getLocalEDPGradients(float[][] freqs){
+    public float[] getLocalEDPGradients(float[][] freqs, float[] pkgpower, float[] pkgbips){
         float[] gradients = new float[this.num_pkg];
-        
-        //float[][] grad_power = new float[this.num_pkg][this.num_core];
-        //float[][] val_power = new float[this.num_pkg][this.num_core];
-        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
-        //float[][] val_perf = new float[this.num_pkg][this.num_core];
         for (int p=0; p<this.num_pkg; p++){
             float grad_sum = 0.0f;
             for (int c=0; c<this.num_core; c++){
-                float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
-                float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
+                float g_dram = dram_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
-                float grad = 2*(bips/power)*(g_perf/g_power) - (bips*bips)/(power*power);
+                float grad = 2*(pkgbips[p]/pkgpower[p])*(g_perf/(g_power+g_dram)) 
+                    - (pkgbips[p]*pkgbips[p])/(pkgpower[p]*pkgpower[p]);
                 if (grad < 0 && freqs[p][c] < freq_min){
                     grad = 0;
                 } else if (grad > 0 && freqs[p][c] > freq_max){
@@ -190,24 +205,15 @@ public class MLModel {
 
         return gradients;
     }
-    public float[] getGlobalEDPGradients(float[][] freqs){
+    public float[] getGlobalEDPGradients(float[][] freqs, float totalbips, float totalpower){
         float[] gradients = new float[this.num_pkg];
-        float totalbips = 0.0f;
-        float totalpower = 0.0f;
-        for (int p=0; p<this.num_pkg; p++){
-            for (int c=0; c<this.num_core; c++){
-                float power = power_func[p][c].apply(freqs[p][c]) + power_bias[p]/this.num_core;
-                float bips = bips_func[p][c].apply(freqs[p][c]) + bips_bias[p][c];
-                totalpower += power;
-                totalbips += bips;
-            }
-        }
         for (int p=0; p<this.num_pkg; p++){
             float grad_sum = 0.0f;
             for (int c=0; c<this.num_core; c++){
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
+                float g_dram = dram_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
-                float grad = 2*(totalbips/totalpower)*(g_perf/g_power) - (totalbips*totalbips)/(totalpower*totalpower);
+                float grad = 2*(totalbips/totalpower)*(g_perf/(g_power+g_dram)) - (totalbips*totalbips)/(totalpower*totalpower);
                 if (grad < 0 && freqs[p][c] < freq_min){
                     grad = 0;
                 } else if (grad > 0 && freqs[p][c] > freq_max){
@@ -278,6 +284,7 @@ public class MLModel {
 
         return gradients;
     }
+    //Only CPU power grads
     public float[] getPowerGradients(float[][] freqs){
         float[] gradients = new float[this.num_pkg];
         
@@ -292,6 +299,27 @@ public class MLModel {
                 float power = power_func[p][c].apply(f);
 
                 float g_power = power_func[p][c].derivative(f);
+                grad_sum += g_power;
+            }
+            gradients[p] = grad_sum;
+        }
+        //d(B/P)/dP =(dB/df * df/dP)/P - B/P^2
+
+        return gradients;
+    }
+    public float[] getDRAMGradients(float[][] freqs){
+        float[] gradients = new float[this.num_pkg];
+        
+        //float[][] grad_power = new float[this.num_pkg][this.num_core];
+        //float[][] val_power = new float[this.num_pkg][this.num_core];
+        //float[][] grad_perf = new float[this.num_pkg][this.num_core];
+        //float[][] val_perf = new float[this.num_pkg][this.num_core];
+        for (int p=0; p<this.num_pkg; p++){
+            float grad_sum = 0.0f;
+            for (int c=0; c<this.num_core; c++){
+                float f = freqs[p][c];
+
+                float g_power = dram_func[p][c].derivative(f);
                 grad_sum += g_power;
             }
             gradients[p] = grad_sum;
@@ -328,6 +356,12 @@ public class MLModel {
     public void update_bias(float[] actual, float[] prediction){
         for (int i=0; i<power_bias.length; i++){
             power_bias[i] = (1-adaptive_lr) * power_bias[i] +
+                adaptive_lr*(actual[i] - prediction[i]);
+        }
+    }
+    public void update_dram_bias(float[] actual, float[] prediction){
+        for (int i=0; i<dram_bias.length; i++){
+            dram_bias[i] = (1-adaptive_lr) * dram_bias[i] +
                 adaptive_lr*(actual[i] - prediction[i]);
         }
     }

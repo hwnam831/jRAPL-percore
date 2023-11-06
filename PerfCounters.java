@@ -84,6 +84,7 @@ class TraceCollectorThread extends Thread{
     public ArrayDeque<PerfCounters> perfCounters;
     public float[] moving_input;
     public float[] moving_power;
+    public float[] moving_dram;
     private int tracecount;
     public int traceWindow;
     private boolean running = true;
@@ -115,8 +116,10 @@ class TraceCollectorThread extends Thread{
         this.tracecount = 0;
         moving_input = new float[threadNum*9];
         moving_power = new float[num_sockets];
+        moving_dram = new float[num_sockets];
         for (int i=0; i<moving_power.length; i++){
             moving_power[i] = 0;
+            moving_dram[i] = 0;
         }
         for (int i=0; i<moving_input.length; i++){
             moving_input[i] = 0;
@@ -141,6 +144,8 @@ class TraceCollectorThread extends Thread{
             
             moving_power[pkg] = (1-alpha)*moving_power[pkg] +
                 alpha*pctr.pkgCtrs[pkg][1];
+            moving_dram[pkg] = (1-alpha)*moving_dram[pkg] +
+                alpha*pctr.pkgCtrs[pkg][0];
             for (int core=0; core<cps; core++){
                 for (int c=0; c<pctr.coreCtrs[0].length; c++){
                     moving_input[offset + core*9 + c] = (1-alpha)*moving_input[offset+ core*9 + c] + 

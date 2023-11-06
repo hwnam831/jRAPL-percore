@@ -50,31 +50,6 @@ class CSVRecord {
     }
 }
 
-class HierarchicalAgent extends Thread{
-    public static void main(String[] args){
-        for (int i=0; i<100; i++){
-            try{
-                Thread.sleep(100);
-                Socket s = new Socket("10.10.1.1", 4545);
-                //DataInputStream din=new DataInputStream(s.getInputStream());  
-                //BufferedInputStream bin = new BufferedInputStream(s.getInputStream());
-                BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
-                String message = "55.2,13.3,4.3";
-                dout.writeUTF(message);
-                System.out.println(reader.readLine());
-                reader.close();
-                dout.close();
-                s.close();
-                
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
-}
-
 public class LocalController{
     public static final double lr_max = 2.0;
     public static final double lr_min = -2.0;
@@ -92,7 +67,7 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "slurm2", "ml", "localml","localml2", "ml1", "ml2", "ml3").setDefault("fair");
+                .choices("fair", "slurm", "ml", "localml", "ml2").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
@@ -126,6 +101,8 @@ public class LocalController{
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms, (String)res.get("parent"));
         double[] curpl = pt.curpl.limits.clone();
         float[] powerusage = new float[curpl.length];
+        float[] drampower = new float[curpl.length];
+        float[] cpupower = new float[curpl.length];
         double tolerance = 0.0;
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         String policy = (String) res.get("policy");
@@ -134,10 +111,10 @@ public class LocalController{
             +"-" + tag + "-" + (Integer)res.get("cap") + "W-raw.csv", timeperiodms);
         int num_pkg = t.num_sockets;
         int core_per_pkg = t.threadNum/t.num_sockets;
-        MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power.pt", "c220g2_bips.pt");
+        MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power_wdram.pt", "c220g2_bips_wdram.pt");
         t.start();
         pt.start();
-        String[] headers = {"Power", "Power Prediction", "Freq", "Gradient", "BIPS", 
+        String[] headers = {"Total Power", "CPU Power", "Power Prediction","DRAM Power", "DRAM Prediction", "Freq", "Gradient", "BIPS", 
             "BIPS Prediction", "Cur PL", "Next PL", "Util"};
         CSVRecord records = new CSVRecord(headers, num_pkg);
         records.printHeader(System.out);
@@ -146,7 +123,8 @@ public class LocalController{
         } catch (Exception e){
             
         }
-        float[] predictions = new float[num_pkg];
+        float[] cpupredictions = new float[num_pkg];
+        float[] drampredictions = new float[num_pkg];
         float[] curperf = new float[num_pkg];
         float[] curutil = new float[num_pkg];
         float[][] core_bips = new float[num_pkg][core_per_pkg];
@@ -160,9 +138,11 @@ public class LocalController{
         long basetime = curtimems;
         long nextPeriod = curtimems + timeperiodms;
         double total_curpower = 0;
+        double total_bips = 0;
         for (int epc = 0; epc < epochs; epc++){
 
             total_curpower = 0;
+            total_bips=0;
             curtimems = java.lang.System.currentTimeMillis();
             try{
                 Thread.sleep(nextPeriod - curtimems);
@@ -192,8 +172,10 @@ public class LocalController{
             }
             */
             for (int i = 0; i<powerusage.length; i++){
-                
-                powerusage[i] = t.moving_power[i];
+                drampower[i] = t.moving_dram[i];
+                cpupower[i] = t.moving_power[i];
+                powerusage[i] = drampower[i] + cpupower[i];
+                total_curpower += powerusage[i];
                 AvgPOW[i] = AvgPOW[i]*0.9f + powerusage[i]*0.1f;
                 if (epc == 0){
                     AvgPOW[i] = powerusage[i];
@@ -217,6 +199,7 @@ public class LocalController{
                 if (epc == 0){
                     AvgBIPS[i] = curperf[i];
                 }
+                total_bips += curperf[i];
 
             }
             endmodel.inference(t.moving_input);
@@ -232,22 +215,18 @@ public class LocalController{
             }
             t.lock.unlock();
             if(epc >= 1){
-                endmodel.update_bias(powerusage, predictions);
+                endmodel.update_bias(cpupower, cpupredictions);
+                endmodel.update_dram_bias(drampower, drampredictions);
                 endmodel.update_perf_bias(core_bips, perfpredictions);
             }
-            predictions = endmodel.predict_power(freqs);
+            cpupredictions = endmodel.predict_power(freqs);
+            drampredictions = endmodel.predict_dram(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
-            float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs); // gradients per socket
-            if (policy.equals("localml2")){
-                //edp_gradients = endmodel.getLocalB2PGradients(freqs, curperf, powerusage);
-                edp_gradients = endmodel.getLocalB2PGradients(freqs, AvgBIPS, AvgPOW);
+            float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs, (float)total_bips,(float)total_curpower); // gradients per socket
+            if (policy.equals("localml")){
+                edp_gradients = endmodel.getLocalEDPGradients(freqs, curperf, powerusage);
             }
-            /* 
-            System.out.print("Cur power usage," + Arrays.toString(powerusage).replace('[', ' ').replace(']',' ') + 
-                ",Freq," + Arrays.toString(avgfreqs).replace('[', ' ').replace(']',' ') +
-                ",Prediction," + Arrays.toString(predictions).replace('[', ' ').replace(']',' ') +
-                ",Gradients," + Arrays.toString(edp_gradients).replace('[', ' ').replace(']',' '));
-            */
+
             records.newLine();
             
 
@@ -261,9 +240,12 @@ public class LocalController{
             //System.out.print(",Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
             //    ",Bips Prediction," + Arrays.toString(pkgbipspredictions).replace('[', ' ').replace(']',' '));
             for (int pkg=0; pkg<t.num_sockets; pkg++){
-                records.addRecord("Power:" + pkg, powerusage[pkg]);
+                records.addRecord("Total Power:" + pkg, powerusage[pkg]);
+                records.addRecord("CPU Power:" + pkg, cpupower[pkg]);
+                records.addRecord("DRAM Power:" + pkg, drampower[pkg]);
                 records.addRecord("Freq:" + pkg, avgfreqs[pkg]);
-                records.addRecord("Power Prediction:" + pkg, predictions[pkg]);
+                records.addRecord("Power Prediction:" + pkg, cpupredictions[pkg]);
+                records.addRecord("DRAM Prediction:" + pkg, drampredictions[pkg]);
                 records.addRecord("Gradient:" + pkg, edp_gradients[pkg]);
                 records.addRecord("BIPS:" + pkg, curperf[pkg]);
                 records.addRecord("BIPS Prediction:" + pkg, pkgbipspredictions[pkg]);
@@ -279,7 +261,6 @@ public class LocalController{
                 
                 for (int i = 0; i<curpl.length; i++){
                     double diff = curpl[i] - powerusage[i];
-                    total_curpower += powerusage[i];
                     if (diff > 0){
                         pool += diff * 0.5 * beta;
                         newpl[i] -= diff*0.5*beta;
@@ -291,51 +272,13 @@ public class LocalController{
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] += (tolerance + pool) / newpl.length;
                 }
-            } else if (policy.equals("slurm2")){
-                
-                for (int i = 0; i<curpl.length; i++){
-                    double diff = curpl[i] - powerusage[i];
-                    total_curpower += powerusage[i];
-                    if (diff > 0){
-                        pool += diff * 0.5 * beta;
-                        newpl[i] -= diff*0.5*beta;
-                        
-                    }
-                
-                }
-                //tolerance = tolerance*0.9 + (totalcap - total_curpower)*0.1;
-                //System.out.print("Tolerance," + tolerance + ",");
-                
-                for (int i = 0; i<newpl.length; i++){
-                    newpl[i] += (tolerance + pool) / newpl.length;
-                }
-
             } else if (policy.equals("ml")){
-                /* 
-                double sum_newpl = 0;
                 
-                double grad_sum = 0;
-                for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
-                    sum_newpl += newpl[i];
-                    total_curpower += powerusage[i];
-                    grad_sum +=  edp_gradients[i];
-                }
-                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
-                //System.err.println("Tolerance:" + tolerance + ", cap:" + totalcap + "curpower:" + total_curpower);
-                if (sum_newpl > totalcap + tolerance){
-                    double delta = totalcap + tolerance - total_curpower;
-                    double newlr = delta / grad_sum;
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] = powerusage[i] + newlr*edp_gradients[i];
-                    }
-                }*/
                 double sum_newpl = 0;
                 double grad_sum=0;
                 
                 for (int i = 0; i<newpl.length; i++){
-                    grad_sum += edp_gradients[i];
-                    total_curpower += powerusage[i];              
+                    grad_sum += edp_gradients[i];            
                 }
                 if (grad_sum > grad_max){
                     lr = grad_max/grad_sum;
@@ -344,7 +287,7 @@ public class LocalController{
                 } else {
                     lr = 1;
                 }
-                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
+
                 for (int i = 0; i<newpl.length; i++){
                     
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
@@ -385,64 +328,6 @@ public class LocalController{
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
                 }
             
-            } else if (policy.equals("localml2")){
-                
-                for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
-                    newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
-                }
-            
-            } else if (policy.equals("ml1")){
-                // Reduce equally if exceeds
-                double sum_newpl = 0;
-                double grad_sum=0;
-                
-                for (int i = 0; i<newpl.length; i++){
-                    grad_sum += edp_gradients[i];
-                    total_curpower += powerusage[i];              
-                }
-                if (grad_sum > grad_max){
-                    lr = grad_max/grad_sum;
-                } else if(grad_sum < -grad_max){
-                    lr = -grad_max/grad_sum;
-                } else {
-                    lr = 1;
-                }
-                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
-                for (int i = 0; i<newpl.length; i++){
-                    
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
-                    if (newpl[i] > power_max){
-                        newpl[i] = power_max;
-                    } else if (newpl[i] < power_min){
-                        newpl[i] = power_min;
-                    }
-                    sum_newpl += newpl[i];              
-                }
-                double remainder = 0;
-                int eff_len = newpl.length;
-                double[] coefs = new double[newpl.length];
-                if (sum_newpl > totalcap + tolerance){
-                    double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] -= delta;
-                        if (newpl[i] < power_min){
-                            remainder += power_min - newpl[i];
-                            eff_len--;
-                            newpl[i] = power_min;
-                            coefs[i] = 0;
-                        }else{
-                            coefs[i] = 1;
-                        }
-                    }
-                    for (int i = 0; i<newpl.length; i++){
-                        if(eff_len <= 0){
-                            break;
-                        }
-                        newpl[i] -= coefs[i]*remainder/eff_len;
-                    }
-                }
-
             } else if (policy.equals("ml2")){
                 // +-1 if exceeds
                 
@@ -452,7 +337,6 @@ public class LocalController{
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
                     sum_newpl += newpl[i];
-                    total_curpower += powerusage[i];
                     grad_sum +=  edp_gradients[i];
                 }
                 //tolerance = (tolerance + totalcap - total_curpower)*0.5;
@@ -471,32 +355,10 @@ public class LocalController{
                     }
                 }
 
-            } else if (policy.equals("ml3")){
-                // Reduce equally if exceeds
-                double sum_newpl = 0;
-                
-                double grad_sum = 0;
-                double epsilon = 2.0 * newpl.length;
-                for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
-                    sum_newpl += newpl[i];
-                    total_curpower += powerusage[i];
-                    grad_sum +=  edp_gradients[i];
-                }
-                //tolerance = (tolerance + totalcap - total_curpower)*0.5;
-                if (sum_newpl > totalcap + tolerance){
-                    double delta = totalcap + tolerance - total_curpower + epsilon;
-                    double newlr = delta / grad_sum;
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] = powerusage[i] + newlr*edp_gradients[i] - epsilon/newpl.length;
-                    }
-                }
-
             } else {
                 //System.out.println(",Cur power limit," + arrToStr(curpl) +
                 //",New power limit," + arrToStr(newpl) + ",Time," + (curtimems-basetime));
                 for (int i = 0; i<newpl.length; i++){
-                        total_curpower += powerusage[i];
                         newpl[i] = totalcap / newpl.length;
                     }
                  //Assume fair policy
@@ -513,12 +375,13 @@ public class LocalController{
             curpl = newpl;
             float[] bips_grads = endmodel.getBIPSGradients(freqs);
             float[] power_grads = endmodel.getPowerGradients(freqs);
+            float[] dram_grads = endmodel.getDRAMGradients(freqs);
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
-                    pt.curpl.limits[pkg] = newpl[pkg];
+                    pt.curpl.limits[pkg] = newpl[pkg] - drampower[pkg];
                     pt.curpl.usages[pkg] = powerusage[pkg];
                     pt.curpl.bips[pkg] = curperf[pkg];
-                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
+                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + dram_grads[pkg] + 1e-6);
                 }
                 pt.curpl.notify();
             }
