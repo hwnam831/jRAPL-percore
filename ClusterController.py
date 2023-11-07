@@ -87,11 +87,11 @@ def ControllerServer():
     print("server stopped", file=sys.stderr)
     serverSocket.close()
 
-power_max = 200
+power_max = 250
 power_min = 35
 grad_max = 10.0
-alpha = 0.25
-default_lr = 2.0
+alpha = 0.2
+default_lr = 5.0
 
 def printcsv(starttime):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -106,9 +106,11 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','fair'],
                 default='fair',help="policy")
     parser.add_argument("-l", "--limit", type=float,
-                default='160',help="cluster power limit")
+                default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
                 default='400',help="time period in milliseconds")
+    parser.add_argument("--graceperiod", type=float,
+                default='5',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
                 default='-1',help="experiment duration in seconds")
     args=parser.parse_args()
@@ -132,6 +134,8 @@ if __name__ == '__main__':
         if deadline is not None and time.time() > deadline:
             serverRunning = False
         if len(clients) < 2:
+            continue
+        if (time.time() - starttime) < args.graceperiod:
             continue
         lockStatus.acquire()
         totalbips = 0.0
