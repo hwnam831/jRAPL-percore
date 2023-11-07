@@ -110,7 +110,7 @@ if __name__ == '__main__':
     parser.add_argument("--periodms", type=float,
                 default='400',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
-                default='5',help="grace period in seconds")
+                default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
                 default='-1',help="experiment duration in seconds")
     args=parser.parse_args()
@@ -186,6 +186,11 @@ if __name__ == '__main__':
                     if eff_len <= 0:
                         break
                     nodeStatuses[c]['Limit'] -= coefs[c]*remainder/eff_len
+            else:
+                delta = (clusterPowerLimit - sum_newpl)/len(clients)
+                for c in clients:
+                    newpl = nodeStatuses[c]['Limit'] + delta/4
+                    nodeStatuses[c]['Limit'] = newpl
         elif args.policy == 'slurm':
             pool = 0.0
             beta = len(clients) / (len(clients) - 0.99)

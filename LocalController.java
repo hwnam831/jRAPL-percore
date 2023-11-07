@@ -322,6 +322,11 @@ public class LocalController{
                         }
                         newpl[i] -= coefs[i]*remainder/eff_len;
                     }
+                } else {
+                    double delta = (totalcap - sum_newpl)/newpl.length;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] += delta/4;
+                    }
                 }
                 //corner-case: minimum freq
                 if (avgfreqs[0] < 1e6 && newpl[0] < curpl[0] + 1){
