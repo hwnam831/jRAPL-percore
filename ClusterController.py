@@ -136,6 +136,8 @@ if __name__ == '__main__':
         if len(clients) < 2:
             continue
         if (time.time() - starttime) < args.graceperiod:
+            for c in clients:
+                nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
             continue
         lockStatus.acquire()
         totalbips = 0.0
