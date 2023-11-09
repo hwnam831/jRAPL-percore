@@ -114,7 +114,7 @@ public class LocalController{
         MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power_wdram.pt", "c220g2_bips_wdram.pt");
         t.start();
         pt.start();
-        String[] headers = {"Total Power", "CPU Power", "Power Prediction","DRAM Power", "DRAM Prediction", "Freq", "Gradient", "BIPS", 
+        String[] headers = {"Total Cap", "CPU Power", "Power Prediction","DRAM Power", "DRAM Prediction", "Freq", "Gradient", "BIPS", 
             "BIPS Prediction", "Cur PL", "Next PL", "Util"};
         CSVRecord records = new CSVRecord(headers, num_pkg);
         records.printHeader(System.out);
@@ -138,9 +138,10 @@ public class LocalController{
         long basetime = curtimems;
         long nextPeriod = curtimems + timeperiodms;
         double total_curpower = 0;
+        double total_drampower = 0;
         double total_bips = 0;
         for (int epc = 0; epc < epochs; epc++){
-
+            total_drampower=0;
             total_curpower = 0;
             total_bips=0;
             curtimems = java.lang.System.currentTimeMillis();
@@ -159,26 +160,16 @@ public class LocalController{
             t.lock.lock();
             String l = "";
             PerfCounters fctr = t.perfCounters.peekFirst();
-            /** 
-            for (int i = 0; i<powerusage.length; i++){
-                
-                powerusage[i] = fctr.pkgCtrs[i][1];
-            }
-
-            for (PerfCounters ctr: t.perfCounters){
-                for (int i = 0; i<powerusage.length; i++){
-                    powerusage[i] = 0.75*powerusage[i] + 0.25*ctr.pkgCtrs[i][1];
-                }
-            }
-            */
+            
             for (int i = 0; i<powerusage.length; i++){
                 drampower[i] = t.moving_dram[i];
                 cpupower[i] = t.moving_power[i];
-                powerusage[i] = drampower[i] + cpupower[i];
-                total_curpower += powerusage[i];
-                AvgPOW[i] = AvgPOW[i]*0.9f + powerusage[i]*0.1f;
+                powerusage[i] = cpupower[i] + drampower[i];
+                total_curpower += cpupower[i];
+                total_drampower += drampower[i];
+                AvgPOW[i] = AvgPOW[i]*0.9f + cpupower[i]*0.1f;
                 if (epc == 0){
-                    AvgPOW[i] = powerusage[i];
+                    AvgPOW[i] = cpupower[i];
                 }
             }
 
@@ -222,7 +213,7 @@ public class LocalController{
             cpupredictions = endmodel.predict_power(freqs);
             drampredictions = endmodel.predict_dram(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
-            float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs, (float)total_bips,(float)total_curpower); // gradients per socket
+            float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs, (float)total_bips,(float)(total_curpower + total_drampower)); // gradients per socket
             if (policy.equals("localml")){
                 edp_gradients = endmodel.getLocalEDPGradients(freqs, curperf, powerusage);
             }
@@ -240,7 +231,7 @@ public class LocalController{
             //System.out.print(",Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
             //    ",Bips Prediction," + Arrays.toString(pkgbipspredictions).replace('[', ' ').replace(']',' '));
             for (int pkg=0; pkg<t.num_sockets; pkg++){
-                records.addRecord("Total Power:" + pkg, powerusage[pkg]);
+                records.addRecord("Total Cap:" + pkg, totalcap);
                 records.addRecord("CPU Power:" + pkg, cpupower[pkg]);
                 records.addRecord("DRAM Power:" + pkg, drampower[pkg]);
                 records.addRecord("Freq:" + pkg, avgfreqs[pkg]);
@@ -255,13 +246,16 @@ public class LocalController{
 
             }
             double[] newpl = curpl.clone();
-            double pool = 0.0;
+            double pool = totalcap;
+            for (int i=0; i<curpl.length; i++){
+                pool -= curpl[i];
+            }
             final double min_pool = 2.0;
             double beta = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
             if (policy.equals("slurm")){
                 
                 for (int i = 0; i<curpl.length; i++){
-                    double diff = curpl[i] - powerusage[i];
+                    double diff = curpl[i] - cpupower[i];
                     if (diff > 0){
                         pool += diff * 0.5 * beta;
                         newpl[i] -= diff*0.5*beta;
@@ -292,7 +286,7 @@ public class LocalController{
                 
                 for (int i = 0; i<newpl.length; i++){
                     
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
                     if (newpl[i] > power_max){
                         newpl[i] = power_max;
                     } else if (newpl[i] < power_min){
@@ -329,13 +323,15 @@ public class LocalController{
                     }
                 }
                 //corner-case: minimum freq
-                if (avgfreqs[0] < 1e6 && newpl[0] < curpl[0] + 1){
-                    newpl[0] = curpl[0] + 1;
+                if (avgfreqs[0] < 9e5 && newpl[0] < curpl[0] + 0.5 && 
+                    avgfreqs[1] > 9e5  && newpl[1] > power_min){
+                    newpl[0] = curpl[0] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[1] = totalcap - newpl[0];
                     }
-                } else if (avgfreqs[1] < 1e6 && newpl[1] < curpl[1] + 1){
-                    newpl[1] = curpl[1] + 1;
+                } else if (avgfreqs[1] < 9e5 && newpl[1] < curpl[1] + 0.5 &&
+                            avgfreqs[0] > 9e5 && newpl[0] > power_min){
+                    newpl[1] = curpl[1] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[0] = totalcap - newpl[1];
                     }
@@ -343,7 +339,7 @@ public class LocalController{
 
             } else if (policy.equals("localml")){
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
                     newpl[i] = newpl[i] > totalcap/newpl.length ? totalcap/newpl.length : newpl[i];                
                 }
             
@@ -354,7 +350,7 @@ public class LocalController{
                 
                 double grad_sum = 0;
                 for (int i = 0; i<newpl.length; i++){
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - powerusage[i]) + lr*edp_gradients[i];
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
                     sum_newpl += newpl[i];
                     grad_sum +=  edp_gradients[i];
                 }
@@ -370,7 +366,7 @@ public class LocalController{
                     }
                     for (int i = 0; i<newpl.length; i++){
                         float adjust = bips_grads[i]/power_grads[i] > avg_grad ? 1 : -1;
-                        newpl[i] = powerusage[i] + delta/newpl.length + adjust;
+                        newpl[i] = cpupower[i] + delta/newpl.length + adjust;
                     }
                 }
 
@@ -397,10 +393,10 @@ public class LocalController{
             float[] dram_grads = endmodel.getDRAMGradients(freqs);
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
-                    pt.curpl.limits[pkg] = newpl[pkg] - drampower[pkg];
-                    pt.curpl.usages[pkg] = powerusage[pkg];
+                    pt.curpl.limits[pkg] = newpl[pkg];
+                    pt.curpl.usages[pkg] = cpupower[pkg];
                     pt.curpl.bips[pkg] = curperf[pkg];
-                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + dram_grads[pkg] + 1e-6);
+                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
                 }
                 pt.curpl.notify();
             }
