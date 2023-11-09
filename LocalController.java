@@ -114,7 +114,7 @@ public class LocalController{
         MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power_wdram.pt", "c220g2_bips_wdram.pt");
         t.start();
         pt.start();
-        String[] headers = {"Total Power", "CPU Power", "Power Prediction","DRAM Power", "DRAM Prediction", "Freq", "Gradient", "BIPS", 
+        String[] headers = {"Total Cap", "CPU Power", "Power Prediction","DRAM Power", "DRAM Prediction", "Freq", "Gradient", "BIPS", 
             "BIPS Prediction", "Cur PL", "Next PL", "Util"};
         CSVRecord records = new CSVRecord(headers, num_pkg);
         records.printHeader(System.out);
