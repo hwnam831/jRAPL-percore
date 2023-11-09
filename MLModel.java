@@ -46,17 +46,17 @@ public class MLModel {
 	public static native void init(String fname_power, String fname_bips);
     //public static native void close();
     public static native float[] forward(float[] flat_input); // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
-    public float freq_max = 2.8f/4;
+    public float freq_max = 2.85f/4;
     public float freq_min = 0.9f/4;
     public int num_pkg;
     public int num_core;
     public int num_counters;
     public PolyFunc[][] power_func; //3rd-order poly
-    public PolyFunc[][] dram_func; //3rd-order poly
+    //public PolyFunc[][] dram_func; //3rd-order poly
     public PolyFunc[][] bips_func; // ax+b
     public float[] power_bias;
-    public float[] dram_bias;
-    public final float dram_base = 10;
+    //public float[] dram_bias;
+    //public final float dram_base = 10;
     public float[][] bips_bias;
     public static final float adaptive_lr = 0.5f;
     
@@ -75,18 +75,18 @@ public class MLModel {
         this.num_counters = num_counters;
         init(fname_power, fname_bips);
         this.power_func = new PolyFunc[num_pkg][num_core];
-        this.dram_func = new PolyFunc[num_pkg][num_core];
+        //this.dram_func = new PolyFunc[num_pkg][num_core];
         this.bips_func = new PolyFunc[num_pkg][num_core];
         this.power_bias = new float[num_pkg];
-        this.dram_bias = new float[num_pkg];
+        //this.dram_bias = new float[num_pkg];
         this.bips_bias = new float[num_pkg][num_core];
         for (int p=0; p<num_pkg; p++){
             this.power_bias[p] = 0;
-            this.dram_bias[p] = 0;
+            //this.dram_bias[p] = 0;
             for (int c=0; c<num_core; c++){
                 this.bips_bias[p][c] = 0.0f;
                 this.power_func[p][c] = new PolyFunc(3);
-                this.dram_func[p][c] = new PolyFunc(1);
+                //this.dram_func[p][c] = new PolyFunc(1);
                 this.bips_func[p][c] = new PolyFunc(1);
             }
         }
@@ -97,14 +97,14 @@ public class MLModel {
         for (int p=0; p<this.num_pkg; p++){
             offset = p*this.num_core;
             for (int c=0; c<num_core; c++){
-                this.power_func[p][c].coef[0] = coefs[(offset+c)*8 + 0];
-                this.power_func[p][c].coef[1] = coefs[(offset+c)*8 + 1];
-                this.power_func[p][c].coef[2] = coefs[(offset+c)*8 + 2];
-                this.power_func[p][c].coef[3] = coefs[(offset+c)*8 + 3];
-                this.dram_func[p][c].coef[0] = coefs[(offset+c)*8 + 4];
-                this.dram_func[p][c].coef[1] = coefs[(offset+c)*8 + 5];
-                this.bips_func[p][c].coef[0] = coefs[(offset+c)*8 + 6];
-                this.bips_func[p][c].coef[1] = coefs[(offset+c)*8 + 7];
+                this.power_func[p][c].coef[0] = coefs[(offset+c)*6 + 0];
+                this.power_func[p][c].coef[1] = coefs[(offset+c)*6 + 1];
+                this.power_func[p][c].coef[2] = coefs[(offset+c)*6 + 2];
+                this.power_func[p][c].coef[3] = coefs[(offset+c)*6 + 3];
+                //this.dram_func[p][c].coef[0] = coefs[(offset+c)*8 + 4];
+                //this.dram_func[p][c].coef[1] = coefs[(offset+c)*8 + 5];
+                this.bips_func[p][c].coef[0] = coefs[(offset+c)*6 + 4];
+                this.bips_func[p][c].coef[1] = coefs[(offset+c)*6 + 5];
             }
         }
     }
@@ -123,6 +123,7 @@ public class MLModel {
         }
         return power;
     }
+    /* 
     public float[] predict_dram(float[][] freqs){
         float[] power = new float[this.num_pkg];
         for (int pkg=0; pkg<this.num_pkg; pkg++){
@@ -135,7 +136,7 @@ public class MLModel {
             }
         }
         return power;
-    }
+    }*/
 
     public float[][] predict_perf(float[][] freqs){
         float[][] perf = new float[this.num_pkg][this.num_core];
@@ -308,6 +309,7 @@ public class MLModel {
 
         return gradients;
     }
+    /* 
     public float[] getDRAMGradients(float[][] freqs){
         float[] gradients = new float[this.num_pkg];
         
@@ -328,7 +330,7 @@ public class MLModel {
         //d(B/P)/dP =(dB/df * df/dP)/P - B/P^2
 
         return gradients;
-    }
+    }*/
 
     public float[] getEnergyGradients(float[][] freqs){
         float[] gradients = new float[this.num_pkg];
@@ -360,12 +362,13 @@ public class MLModel {
                 adaptive_lr*(actual[i] - prediction[i]);
         }
     }
+    /* 
     public void update_dram_bias(float[] actual, float[] prediction){
         for (int i=0; i<dram_bias.length; i++){
             dram_bias[i] = dram_bias[i] +
                 adaptive_lr*(actual[i] - prediction[i]);
         }
-    }
+    }*/
     public void update_perf_bias(float[][] actual, float[][] prediction){
         for (int i=0; i<bips_bias.length; i++){
             for (int j=0; j<bips_bias[0].length; j++)

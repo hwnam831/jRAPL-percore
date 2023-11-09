@@ -111,10 +111,10 @@ public class LocalController{
             +"-" + tag + "-" + (Integer)res.get("cap") + "W-raw.csv", timeperiodms);
         int num_pkg = t.num_sockets;
         int core_per_pkg = t.threadNum/t.num_sockets;
-        MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power_wdram.pt", "c220g2_bips_wdram.pt");
+        MLModel endmodel = new MLModel(num_pkg, core_per_pkg , 6, "c220g2_power.pt", "c220g2_bips.pt");
         t.start();
         pt.start();
-        String[] headers = {"Total Power", "CPU Power", "Power Prediction","DRAM Power", "DRAM Prediction", "Freq", "Gradient", "BIPS", 
+        String[] headers = {"Total Power", "CPU Power", "Power Prediction","DRAM Power", "Freq", "Gradient", "BIPS", 
             "BIPS Prediction", "Cur PL", "Next PL", "Util"};
         CSVRecord records = new CSVRecord(headers, num_pkg);
         records.printHeader(System.out);
@@ -124,7 +124,7 @@ public class LocalController{
             
         }
         float[] cpupredictions = new float[num_pkg];
-        float[] drampredictions = new float[num_pkg];
+        //float[] drampredictions = new float[num_pkg];
         float[] curperf = new float[num_pkg];
         float[] curutil = new float[num_pkg];
         float[][] core_bips = new float[num_pkg][core_per_pkg];
@@ -217,11 +217,11 @@ public class LocalController{
             t.lock.unlock();
             if(epc >= 1){
                 endmodel.update_bias(cpupower, cpupredictions);
-                endmodel.update_dram_bias(drampower, drampredictions);
+                //endmodel.update_dram_bias(drampower, drampredictions);
                 endmodel.update_perf_bias(core_bips, perfpredictions);
             }
             cpupredictions = endmodel.predict_power(freqs);
-            drampredictions = endmodel.predict_dram(freqs);
+            //drampredictions = endmodel.predict_dram(freqs);
             perfpredictions = endmodel.predict_perf(freqs);
             float[] edp_gradients = endmodel.getGlobalEDPGradients(freqs, (float)total_bips,(float)total_curpower); // gradients per socket
             if (policy.equals("localml")){
@@ -246,7 +246,7 @@ public class LocalController{
                 records.addRecord("DRAM Power:" + pkg, drampower[pkg]);
                 records.addRecord("Freq:" + pkg, avgfreqs[pkg]);
                 records.addRecord("Power Prediction:" + pkg, cpupredictions[pkg]);
-                records.addRecord("DRAM Prediction:" + pkg, drampredictions[pkg]);
+                //records.addRecord("DRAM Prediction:" + pkg, drampredictions[pkg]);
                 records.addRecord("Gradient:" + pkg, edp_gradients[pkg]);
                 records.addRecord("BIPS:" + pkg, curperf[pkg]);
                 records.addRecord("BIPS Prediction:" + pkg, pkgbipspredictions[pkg]);
@@ -395,13 +395,13 @@ public class LocalController{
             curpl = newpl;
             float[] bips_grads = endmodel.getBIPSGradients(freqs);
             float[] power_grads = endmodel.getPowerGradients(freqs);
-            float[] dram_grads = endmodel.getDRAMGradients(freqs);
+            //float[] dram_grads = endmodel.getDRAMGradients(freqs);
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
                     pt.curpl.limits[pkg] = newpl[pkg];
                     pt.curpl.usages[pkg] = powerusage[pkg];
                     pt.curpl.bips[pkg] = curperf[pkg];
-                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + dram_grads[pkg] + 1e-6);
+                    pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + 1e-6);
                 }
                 pt.curpl.notify();
             }
