@@ -91,13 +91,19 @@ power_max = 250
 power_min = 35
 grad_max = 10.0
 alpha = 0.2
-default_lr = 5.0
+default_lr = 1.0
 
 def printcsv(starttime):
     csvlines=[str(int((time.time()-starttime)*1000))]
+    totalbips = 0
+    totalpower = 0
     for c in clients:
+        totalbips += nodeStatuses[c]['BIPS']
+        totalpower += nodeStatuses[c]['Consumption']
+    for c in clients:
+        b2p_grads = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower'] - (totalbips/totalpower)*(totalbips/totalpower)
         csvlines += [str(nodeStatuses[c]['Limit']),str(nodeStatuses[c]['Consumption']),
-                     str(nodeStatuses[c]['BIPS']),str(nodeStatuses[c]['dBIPS/dPower'])]
+                     str(nodeStatuses[c]['BIPS']),str(b2p_grads)]
     print(','.join(csvlines))
 
 
@@ -221,7 +227,7 @@ if __name__ == '__main__':
     for c in clients:
         clientcount += 1
         headerstr += ['Limit:' + str(clientcount),'Consumption:' + str(clientcount),
-                      'BIPS:' + str(clientcount),'dBIPS/dPower:' + str(clientcount)]
+                      'BIPS:' + str(clientcount),'Grad:' + str(clientcount)]
     print(','.join(headerstr))
     controllerserver.join()
     #TODO: test sinusoidal
