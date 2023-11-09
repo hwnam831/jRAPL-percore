@@ -73,7 +73,7 @@ public class LocalController{
         parser.addArgument("--period").type(Integer.class)
                 .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
-                .setDefault(4.0).help("Gradient-to-powercap rate");
+                .setDefault(2.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
@@ -174,7 +174,8 @@ public class LocalController{
             for (int i = 0; i<powerusage.length; i++){
                 drampower[i] = t.moving_dram[i];
                 cpupower[i] = t.moving_power[i];
-                powerusage[i] = drampower[i] + cpupower[i];
+                //powerusage[i] = drampower[i] + cpupower[i];
+                powerusage[i] = cpupower[i];
                 total_curpower += powerusage[i];
                 AvgPOW[i] = AvgPOW[i]*0.9f + powerusage[i]*0.1f;
                 if (epc == 0){
@@ -240,7 +241,7 @@ public class LocalController{
             //System.out.print(",Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
             //    ",Bips Prediction," + Arrays.toString(pkgbipspredictions).replace('[', ' ').replace(']',' '));
             for (int pkg=0; pkg<t.num_sockets; pkg++){
-                records.addRecord("Total Power:" + pkg, powerusage[pkg]);
+                records.addRecord("Total Power:" + pkg, cpupower[pkg] + drampower[pkg]);
                 records.addRecord("CPU Power:" + pkg, cpupower[pkg]);
                 records.addRecord("DRAM Power:" + pkg, drampower[pkg]);
                 records.addRecord("Freq:" + pkg, avgfreqs[pkg]);
@@ -397,7 +398,7 @@ public class LocalController{
             float[] dram_grads = endmodel.getDRAMGradients(freqs);
             synchronized(pt.curpl){
                 for (int pkg=0; pkg<pt.curpl.numSocket; pkg++){
-                    pt.curpl.limits[pkg] = newpl[pkg] - drampower[pkg];
+                    pt.curpl.limits[pkg] = newpl[pkg];
                     pt.curpl.usages[pkg] = powerusage[pkg];
                     pt.curpl.bips[pkg] = curperf[pkg];
                     pt.curpl.dBdP[pkg] = bips_grads[pkg]/(power_grads[pkg] + dram_grads[pkg] + 1e-6);

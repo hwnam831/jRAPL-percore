@@ -152,9 +152,9 @@ public class MLModel {
             float grad_sum = 0.0f;
             for (int c=0; c<this.num_core; c++){
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
-                float g_dram = dram_func[p][c].derivative(freqs[p][c]);
+
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
-                float grad = 2*(pkgbips[p]/pkgpower[p])*(g_perf/(g_power+g_dram)) 
+                float grad = 2*(pkgbips[p]/pkgpower[p])*(g_perf/(g_power)) 
                     - (pkgbips[p]*pkgbips[p])/(pkgpower[p]*pkgpower[p]);
                 if (grad < 0 && freqs[p][c] < freq_min){
                     grad = 0;
@@ -213,9 +213,8 @@ public class MLModel {
             float grad_sum = 0.0f;
             for (int c=0; c<this.num_core; c++){
                 float g_power = power_func[p][c].derivative(freqs[p][c]);
-                float g_dram = dram_func[p][c].derivative(freqs[p][c]);
                 float g_perf = bips_func[p][c].derivative(freqs[p][c]);
-                float grad = 2*(totalbips/totalpower)*(g_perf/(g_power+g_dram)) - (totalbips*totalbips)/(totalpower*totalpower);
+                float grad = 2*(totalbips/totalpower)*(g_perf/(g_power)) - (totalbips*totalbips)/(totalpower*totalpower);
                 if (grad < 0 && freqs[p][c] < freq_min){
                     grad = 0;
                 } else if (grad > 0 && freqs[p][c] > freq_max){
@@ -387,7 +386,7 @@ public class MLModel {
         System.out.println("f(4) = " + powerf.apply(4));
         System.out.println("f'(3) = " + powerf.derivative(3));
 
-        init(args[0] + "_power.pt", args[0] + "_bips.pt");
+        init(args[0] + "_power_wdram.pt", args[0] + "_bips_wdram.pt");
         float[] flat = new float[1*1*2*10*9];
         for (int i=0; i<2*10*9; i++){
             flat[i] = (float)0.1;

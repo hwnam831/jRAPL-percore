@@ -88,10 +88,10 @@ def ControllerServer():
     serverSocket.close()
 
 power_max = 250
-power_min = 35
+power_min = 40
 grad_max = 10.0
 alpha = 0.2
-default_lr = 5.0
+default_lr = 4.0
 
 def printcsv(starttime):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','fair'],
                 default='fair',help="policy")
     parser.add_argument("-l", "--limit", type=float,
-                default='360',help="cluster power limit")
+                default='320',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
                 default='400',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
