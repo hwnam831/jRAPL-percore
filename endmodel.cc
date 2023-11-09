@@ -51,12 +51,15 @@ JNIEXPORT jfloatArray JNICALL Java_MLModel_forward
     //std::cout << input_ten.slice(3,0,1,1) << std::endl;
     std::vector<torch::jit::IValue> inputs;
     inputs.push_back(input_ten);
-    auto power_coefs = powermodule.forward(inputs);
-    auto bips_coefs = bipsmodule.forward(inputs);
+    at::IValue output = powermodule.forward(inputs);
+    auto cpu_coefs = output.toTuple()->elements()[0].toTensor(); // 2 * 10 * 4
+    auto dram_coefs = output.toTuple()->elements()[1].toTensor(); // 2 * 10 * 2
+    auto power_coefs = torch::concat({cpu_coefs, dram_coefs},4);
+    auto bips_coefs = bipsmodule.forward(inputs).toTensor(); // 2 * 10 * 2
     //std::cout << power_coefs << std::endl;
-    auto stacked = torch::concat({power_coefs.toTensor(), bips_coefs.toTensor()},4);
+    auto stacked = torch::concat({power_coefs, bips_coefs},4);
     float *coefs = stacked.data_ptr<float>();
-    jfloatArray arr = env->NewFloatArray(2*10*6);
-    env->SetFloatArrayRegion(arr, 0, 2*10*6, coefs);
+    jfloatArray arr = env->NewFloatArray(2*10*8);
+    env->SetFloatArrayRegion(arr, 0, 2*10*8, coefs);
     return arr;
   }
