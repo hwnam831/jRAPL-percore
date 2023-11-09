@@ -231,7 +231,7 @@ public class LocalController{
             //System.out.print(",Cur perf," + Arrays.toString(curperf).replace('[', ' ').replace(']',' ') + 
             //    ",Bips Prediction," + Arrays.toString(pkgbipspredictions).replace('[', ' ').replace(']',' '));
             for (int pkg=0; pkg<t.num_sockets; pkg++){
-                records.addRecord("Total Power:" + pkg, powerusage[pkg]);
+                records.addRecord("Total Cap:" + pkg, totalcap);
                 records.addRecord("CPU Power:" + pkg, cpupower[pkg]);
                 records.addRecord("DRAM Power:" + pkg, drampower[pkg]);
                 records.addRecord("Freq:" + pkg, avgfreqs[pkg]);
@@ -246,7 +246,10 @@ public class LocalController{
 
             }
             double[] newpl = curpl.clone();
-            double pool = 0.0;
+            double pool = totalcap;
+            for (int i=0; i<curpl.length; i++){
+                pool -= curpl[i];
+            }
             final double min_pool = 2.0;
             double beta = curpl.length / (curpl.length - 0.99); //avoid divide-by-zero
             if (policy.equals("slurm")){
