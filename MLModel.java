@@ -146,7 +146,7 @@ public class MLModel {
         }
         return perf;
     }
-    public float[] getLocalEDPGradients(float[][] freqs, float[] pkgpower, float[] pkgbips){
+    public float[] getLocalEDPGradients(float[][] freqs, float[] pkgbips, float[] pkgpower){
         float[] gradients = new float[this.num_pkg];
         for (int p=0; p<this.num_pkg; p++){
             float grad_sum = 0.0f;
