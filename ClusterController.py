@@ -142,6 +142,7 @@ if __name__ == '__main__':
         if len(clients) < 2:
             continue
         if (time.time() - starttime) < args.graceperiod:
+            clients.sort()
             for c in clients:
                 nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
             continue
@@ -231,6 +232,7 @@ if __name__ == '__main__':
         headerstr += ['Limit:' + str(clientcount),'Consumption:' + str(clientcount),
                       'BIPS:' + str(clientcount),'Grad:' + str(clientcount)]
     print(','.join(headerstr))
+    print(clients, file=sys.stderr)
     controllerserver.join()
     #TODO: test sinusoidal
     # Create a socket for receiving connections
