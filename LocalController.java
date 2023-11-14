@@ -73,7 +73,7 @@ public class LocalController{
         parser.addArgument("--period").type(Integer.class)
                 .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
-                .setDefault(4.0).help("Gradient-to-powercap rate");
+                .setDefault(2.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
@@ -323,14 +323,14 @@ public class LocalController{
                     }
                 }
                 //corner-case: minimum freq
-                if (avgfreqs[0] < 9e5 && newpl[0] < curpl[0] + 0.5 && 
-                    avgfreqs[1] > 9e5  && newpl[1] > power_min){
+                if (avgfreqs[0] < 8e5 && newpl[0] < curpl[0] + 0.5 && 
+                    avgfreqs[1] > 8e5  && newpl[1] > power_min){
                     newpl[0] = curpl[0] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[1] = totalcap - newpl[0];
                     }
-                } else if (avgfreqs[1] < 9e5 && newpl[1] < curpl[1] + 0.5 &&
-                            avgfreqs[0] > 9e5 && newpl[0] > power_min){
+                } else if (avgfreqs[1] < 8e5 && newpl[1] < curpl[1] + 0.5 &&
+                            avgfreqs[0] > 8e5 && newpl[0] > power_min){
                     newpl[1] = curpl[1] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[0] = totalcap - newpl[1];
