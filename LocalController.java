@@ -319,7 +319,7 @@ public class LocalController{
                 } else {
                     double delta = (totalcap - sum_newpl)/newpl.length;
                     for (int i = 0; i<newpl.length; i++){
-                        newpl[i] += delta/4;
+                        newpl[i] += delta/2;
                     }
                 }
                 //corner-case: minimum freq
