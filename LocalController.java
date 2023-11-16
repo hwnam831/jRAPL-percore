@@ -78,6 +78,8 @@ public class LocalController{
                 .setDefault(20).help("Sample period in ms");
         parser.addArgument("--duration").type(Integer.class)
                 .setDefault(60).help("Time duration in seconds");
+        parser.addArgument("--graceperiod").type(Integer.class)
+                .setDefault(5).help("Do not control ultil certain seconds");
         parser.addArgument("--alpha").type(Double.class)
                 .setDefault(0.25).help("Adjustment rate to make PL and power closer");
         parser.addArgument("--tag").type(String.class)
@@ -98,6 +100,7 @@ public class LocalController{
         double lr = (Double)res.get("lr");
         int timeperiodms = (Integer)res.get("period");
         int sampleperiodms = (Integer)res.get("sampleperiod");
+        
         PowerControllerThread pt = new PowerControllerThread((Integer)res.get("cap"),timeperiodms, (String)res.get("parent"));
         double[] curpl = pt.curpl.limits.clone();
         float[] powerusage = new float[curpl.length];
@@ -105,6 +108,7 @@ public class LocalController{
         float[] cpupower = new float[curpl.length];
         double tolerance = 0.0;
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
+        int graceepochs = ((Integer)res.get("graceperiod")*1000)/timeperiodms;
         String policy = (String) res.get("policy");
         String tag = (String) res.get("tag");
         TraceCollectorThread t = new TraceCollectorThread(16, sampleperiodms, policy 
@@ -378,7 +382,12 @@ public class LocalController{
                     }
                  //Assume fair policy
             }
-            
+            //fair until grace period
+            if(e < graceepochs){
+                for (int i = 0; i<newpl.length; i++){
+                    newpl[i] = totalcap / newpl.length;
+                }
+            }
             //System.out.println(",Cur power limit," + arrToStr(curpl) +
             //    ",New power limit," + arrToStr(newpl) + ",Time," + (curtimems-basetime));
             records.addRecord("Time(ms)", curtimems-basetime);
