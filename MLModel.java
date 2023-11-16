@@ -115,8 +115,8 @@ public class MLModel {
     public float[] predict_power(float[][] freqs){
         float[] power = new float[this.num_pkg];
         for (int pkg=0; pkg<this.num_pkg; pkg++){
-            //power[pkg] = power_bias[pkg];
-            power[pkg] = 0;
+            power[pkg] = power_bias[pkg];
+            //power[pkg] = 0;
         }
         for (int pkg=0; pkg<this.num_pkg; pkg++){
             for (int core=0; core<this.num_core; core++){
@@ -143,8 +143,8 @@ public class MLModel {
         float[][] perf = new float[this.num_pkg][this.num_core];
         for (int pkg=0; pkg<this.num_pkg; pkg++){
             for (int core=0; core<this.num_core; core++){
-                //perf[pkg][core] = bips_bias[pkg][core] + bips_func[pkg][core].apply(freqs[pkg][core]);
-                perf[pkg][core] = bips_func[pkg][core].apply(freqs[pkg][core]);
+                perf[pkg][core] = bips_bias[pkg][core] + bips_func[pkg][core].apply(freqs[pkg][core]);
+                //perf[pkg][core] = bips_func[pkg][core].apply(freqs[pkg][core]);
             }
         }
         return perf;
