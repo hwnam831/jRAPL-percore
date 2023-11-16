@@ -383,7 +383,7 @@ public class LocalController{
                  //Assume fair policy
             }
             //fair until grace period
-            if(e < graceepochs){
+            if(epc < graceepochs){
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = totalcap / newpl.length;
                 }
