@@ -383,11 +383,12 @@ public class LocalController{
                  //Assume fair policy
             }
             //fair until grace period
+            /*
             if(epc < graceepochs){
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = totalcap / newpl.length;
                 }
-            }
+            }*/
             //System.out.println(",Cur power limit," + arrToStr(curpl) +
             //    ",New power limit," + arrToStr(newpl) + ",Time," + (curtimems-basetime));
             records.addRecord("Time(ms)", curtimems-basetime);
