@@ -133,7 +133,8 @@ public class TraceCollector{
     public static void main(String[] args) {
 
         int durationms=60000;
-        int sampleperiod = 20;
+        int sampleperiod = 100;
+        int instantperiod = 20;
         
         //int socketNum = EnergyCheckUtils.GetSocketNum();
         
@@ -180,7 +181,7 @@ public class TraceCollector{
             }
             while(java.lang.System.currentTimeMillis() < nextPeriod)
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(instantperiod);
                     for (int i=0; i<num_sockets; i++){
                         after[i].instantRead(); //Voltages, Temperatures
                     }
