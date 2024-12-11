@@ -24,7 +24,7 @@ if __name__=='__main__':
     else:
         duration = int(sys.argv[1])
     #print(duration)
-    epochs = (duration*1000)//20
+    epochs = (duration*1000)//100
     count = {f:0 for f in range(minfreq,maxfreq+1,100)}
     for e in range(epochs):
         if curfreq == maxfreq:
@@ -37,7 +37,7 @@ if __name__=='__main__':
         curfreq = max(curfreq,minfreq)
         count[curfreq] = count[curfreq]+1
         set_freq(curfreq)
-        time.sleep(20/1000)
+        time.sleep(100/1000)
     set_freq(maxfreq)
     print(count)
     #print(time.time() - starttime)
