@@ -31,14 +31,6 @@ libCPUScaler.so: CPUScaler.c arch_spec.c msr.c dvfs.c
 	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) $(DEFS) CPUScaler.c arch_spec.c msr.c dvfs.c -lc -lm
 	gcc -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) $(DEFS) -shared -Wl,-soname,libCPUScaler.so -o libCPUScaler.so CPUScaler.o arch_spec.o msr.o dvfs.o -lc -lm
 
-libjtorch.so: jtorch.cc
-	/usr/bin/c++ $(CXX_DEFINES) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) $(CXX_INCLUDES) $(CXX_FLAGS) -o jtorch.cc.o -c jtorch.cc
-	/usr/bin/c++ -fPIC  -D_GLIBCXX_USE_CXX11_ABI=0  -shared -Wl,-soname,libjtorch.so -o libjtorch.so jtorch.cc.o $(MYDEPS)
-
-libMLModel.so: endmodel.cc
-	/usr/bin/c++ $(CXX_DEFINES) -I $(JAVA_INCLUDE) -I$(JAVA_INCLUDE_LINUX) $(CXX_INCLUDES) $(CXX_FLAGS) -o endmodel.cc.o -c endmodel.cc
-	/usr/bin/c++ -fPIC  -D_GLIBCXX_USE_CXX11_ABI=0  -shared -Wl,-soname,libMLModel.so -o libMLModel.so endmodel.cc.o $(MYDEPS)
-
 test: CPUScaler_test.c
 	gcc $(CFLAGS) -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) $(DEFS) CPUScaler_test.c arch_spec.c msr.c -lc -lm
 	gcc -I $(JAVA_INCLUDE) -I $(JAVA_INCLUDE_LINUX) $(DEFS) -o cpuscalertest CPUScaler_test.o arch_spec.o msr.o -lc -lm

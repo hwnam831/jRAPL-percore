@@ -43,9 +43,11 @@ class PolyFunc {
 
 public class MLModel {
 
-	public static native void init(String fname_power, String fname_bips);
+	//public static native void init(String fname_power, String fname_bips);
+    
     //public static native void close();
-    public static native float[] forward(float[] flat_input); // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
+    //public static native float[] forward(float[] flat_input); // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
+    
     public float freq_max = 2.8f/4;
     public float freq_min = 0.9f/4;
     public int num_pkg;
@@ -62,12 +64,6 @@ public class MLModel {
     
     //public native static 
     //public 
-
-    static {
-
-		System.loadLibrary("MLModel");
-
-	}
 
     public MLModel(int num_pkg, int num_core, int num_counters, String fname_power, String fname_bips){
         this.num_pkg = num_pkg;
@@ -91,7 +87,14 @@ public class MLModel {
             }
         }
     }
+    public void init(String fname_power, String fname_bips){
+        //TODO
+        return;
+    }
 
+    public float[] forward(float[] flat_input){;
+        return {1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f};
+    } // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
     public void flat_to_poly(float[] coefs){
         int offset = 0;
         for (int p=0; p<this.num_pkg; p++){
