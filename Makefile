@@ -19,7 +19,7 @@ matmul:
 	gcc -O3 -o matmul matrix-mul-pthread.c -lpthread
 microbench: microbench.c
 	gcc -O3 -o microbench microbench.c
-install: libCPUScaler.so libperfCheck.so libjtorch.so libMLModel.so
+install: libCPUScaler.so libperfCheck.so
 	sudo mkdir -p /usr/lib/jni
 	sudo cp *.so /usr/lib/jni/
 
