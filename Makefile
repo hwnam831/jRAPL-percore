@@ -13,7 +13,7 @@ CXX_FLAGS = -D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu
 
 all: install microbench classes
 
-classes: EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class PerfCounters.class MLModel.class LocalController.class
+classes: EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class PerfCounters.class LocalController.class
 
 matmul:
 	gcc -O3 -o matmul matrix-mul-pthread.c -lpthread
