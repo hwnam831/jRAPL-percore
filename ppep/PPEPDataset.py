@@ -8,6 +8,19 @@ def file_to_poly(fname):
         coefs = [float(l) for l in f]
     return np.poly1d(coefs)
 
+def filter_active(df):
+    df['avgutil:0'] = pd.Series(0.0, index=df.index)
+    df['avgutil:1'] = pd.Series(0.0, index=df.index)
+    for core in range(10):
+        df['avgutil:0'] += df['cycle-count:'+str(core)] / (df['Freq(kHz):'+str(core)])
+    for core in range(10):
+        df['avgutil:1'] += df['cycle-count:'+str(core+10)] / (df['Freq(kHz):'+str(core+10)])
+    df['avgutil:0'] = df['avgutil:0']/(10 * df['Duration(ms)'])
+    df['avgutil:1'] = df['avgutil:1']/(10 * df['Duration(ms)'])
+    #df['avgutil'].plot()
+    mydf =  df[df['avgutil:0'] > 0.05]
+    return mydf[mydf['avgutil:1'] > 0.05]
+
 class PPEPRecord():
     def __init__(self, df, num_pkg=2, num_core=20):
         self.num_pkg = num_pkg
@@ -81,6 +94,7 @@ class PPEPData:
         print(self.vfmodel)
         for fname in filenames:
             mydf = pd.read_csv(fname)
+            mydf = filter_active(mydf)
             myrecord = PPEPRecord(mydf)
             
             pkgctrdata = myrecord.coredata.sum(axis=2)
