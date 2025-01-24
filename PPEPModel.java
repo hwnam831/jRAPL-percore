@@ -60,9 +60,13 @@ public class PPEPModel {
     public float[] idle_coefs;
     public float[] vf_poly;
     public float[] active_coefs;
-    float[][] active_coef_compiled; // compiled per core
-    float[][] mcpi;
-    float[][] ccpi;
+    public float[] predicted_power;
+    public float[] dBIPSdP;
+    //float[][] active_coef_compiled; // compiled per core
+    //float[][] mcpi;
+    //float[][] ccpi;
+    //float[][] cur_freq;
+    //float[][] cur_volt;
     
     //public native static 
     //public 
@@ -92,25 +96,69 @@ public class PPEPModel {
         this.idle_coefs = readFile(fname_idle, 4);
         this.vf_poly = readFile(fname_vfpoly, 3);
         this.active_coefs = readFile(fname_active, 5);
-        this.active_coef_compiled = new float[num_pkg][num_core];
-        this.mcpi = new float[num_pkg][num_core];
-        this.ccpi = new float[num_pkg][num_core];
+        //this.active_coef_compiled = new float[num_pkg][num_core];
+        //this.mcpi = new float[num_pkg][num_core];
+        //this.ccpi = new float[num_pkg][num_core];
+        //this.cur_freq = new float[num_pkg][num_core];
+        //this.cur_volt = new float[num_pkg][num_core];
+        this.predicted_power = new float[num_pkg];
+        this.dBIPSdP = new float[num_pkg];
         
     }
 
+    // raw_counters[core_per_socket*n_sockets][5+n_counters]
+    // voltage,freq,temp,inst,cycle, ldm-stalls,cache-misses,branch-misses,uops
+    public void compile(float[][] coreCtrs){
+        for (int p=0; p<this.num_pkg; p++){
+            float pkg_idle_power = 0.0f;
+            float pkg_dyn_power = 0.0f;
+            this.dBIPSdP[p] = 0;
+            for (int c=0; c<this.num_core; c++){
+                float[] ctrs = coreCtrs[p*this.num_core+c];
+                float freq = ctrs[1];
+                //this.cur_freq[p][c] = freq;
+                float voltage = ctrs[0];
+                //this.cur_volt[p][c] = voltage;
+                float temp = ctrs[2];
+                float bips = ctrs[3];
+                float bcps = ctrs[4];
+                float util = bcps/freq;
+                float ldm_stalls = ctrs[5];
+                float cache_misses = ctrs[6];
+                float branch_misses = ctrs[7];
+                float uops = ctrs[8];
 
-    public void compile(float[] raw_counters){
-        
-    }
-    public float predict_power(float voltage){
-        return 0.0f;
-    }
+                float mcpi = ldm_stalls/bips;
+                float cpi = bcps/bips;
+                float ccpi = cpi - mcpi;
+                //this.mcpi[p][c] = mcpi;
+                //this.ccpi[p][c] = ccpi;
+                //coef: uop, bmiss, cmiss, bips, bcps
+                float active_coef_compiled = 
+                    this.active_coefs[0]*uops + this.active_coefs[1]*branch_misses + 
+                    this.active_coefs[2]*cache_misses + this.active_coefs[3]*bips + this.active_coefs[4]*bcps;
 
-    //pkg-level dbips/dp
-    public float[] getdBIPSdP(float[][] freq){
-        float[] grad = new float[this.num_pkg];
-        return grad;
+                //compute power prediction  
+                float idle_power = this.idle_coefs[0]*voltage*voltage*voltage + 
+                    this.idle_coefs[1]*voltage*voltage + this.idle_coefs[2]*voltage + this.idle_coefs[3];
+                float dyn_power = active_coef_compiled * (0.8f*voltage*voltage*voltage + voltage);
+                pkg_idle_power += idle_power;
+                pkg_dyn_power += dyn_power;
+
+                //compute the gradients
+                float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
+                float dVdf = 2*this.vf_poly[0] * voltage + this.vf_poly[1];
+                float dVdB = dVdf / dBdf;
+                float dPdyndB = dyn_power/bips + active_coef_compiled * (2.4f*voltage*voltage + 1) * dVdB;
+                float dPidledB = (3*this.idle_coefs[0]*voltage*voltage + 2*this.idle_coefs[1]*voltage + this.idle_coefs[2]) * dVdB;
+                this.dBIPSdP[p] += 1/(dPdyndB + dPidledB);
+                  
+                
+            }
+            this.predicted_power[p] = pkg_idle_power + pkg_dyn_power;
+        }
     }
+    
 
     public static void main(String[] args){
         if (args.length < 1){
