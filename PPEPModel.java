@@ -61,7 +61,7 @@ public class PPEPModel {
     public float[] vf_poly;
     public float[] active_coefs;
     public float[] predicted_power;
-    public float[] dBIPSdP;
+    public float[] dBIPSdP; // store it per core
     //float[][] active_coef_compiled; // compiled per core
     //float[][] mcpi;
     //float[][] ccpi;
@@ -73,10 +73,12 @@ public class PPEPModel {
 
     public static float[] readFile(String fname, int count){
         float[] arr = new float[count];
+
         try (BufferedReader br = new BufferedReader(new FileReader(fname))) {
             String line;
             for (int i =0; i<count; i++){
                 line = br.readLine();
+
                 try {
                     float number = Float.parseFloat(line.trim());
                     arr[i] = number;
@@ -141,23 +143,28 @@ public class PPEPModel {
                 //compute power prediction  
                 float idle_power = this.idle_coefs[0]*voltage*voltage*voltage + 
                     this.idle_coefs[1]*voltage*voltage + this.idle_coefs[2]*voltage + this.idle_coefs[3];
-                float dyn_power = active_coef_compiled * (0.8f*voltage*voltage*voltage + voltage);
+                
+                float dyn_power = active_coef_compiled * (1.25f*voltage*voltage*voltage + voltage);
+                idle_power /= this.num_core; //currently, idle power is a per-package model
+                
                 pkg_idle_power += idle_power;
                 pkg_dyn_power += dyn_power;
 
                 //compute the gradients
                 float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
-                float dVdf = 2*this.vf_poly[0] * voltage + this.vf_poly[1];
+                float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
                 float dPdyndB = dyn_power/bips + active_coef_compiled * (2.4f*voltage*voltage + 1) * dVdB;
-                float dPidledB = (3*this.idle_coefs[0]*voltage*voltage + 2*this.idle_coefs[1]*voltage + this.idle_coefs[2]) * dVdB;
-                this.dBIPSdP[p] += 1/(dPdyndB + dPidledB);
+                float dPidledB = (3*this.idle_coefs[0]*voltage*voltage + 2*this.idle_coefs[1]*voltage + this.idle_coefs[2]) * dVdB / this.num_core;
+                this.dBIPSdP[p] += 1/(dPdyndB + dPidledB)/this.num_core;
+                //this.dBIPSdP[p] += 1/dPdyndB;
                   
                 
             }
-            this.predicted_power[p] = pkg_idle_power + pkg_dyn_power;
+            this.predicted_power[p] = pkg_dyn_power + pkg_idle_power;
         }
     }
+
     
 
     public static void main(String[] args){
@@ -165,28 +172,23 @@ public class PPEPModel {
             System.out.println("usage: example-app <path-to-exported-script-module>\n");
         }
         //Test(args[0]);
-        PolyFunc powerf = new PolyFunc(2);
-        powerf.coef[0] = 1;
-        powerf.coef[1] = 2;
-        powerf.coef[2] = -1;
+        PPEPModel mymodel = new PPEPModel(2, 10, "ppep/idlemodel.txt", "ppep/vfpoly.txt","ppep/activecoef.txt");
+        float[][] ctrs = new float[20][9];
+        for (int core=0; core < 20; core++){
+            ctrs[core][0] = 0.83f; // volt
+            ctrs[core][1] = 2.5f; // freq
+            ctrs[core][2] = 30; // temp
+            ctrs[core][3] = 6.1f; // bips
+            ctrs[core][4] = 2.5f; // bcps
+            ctrs[core][5] = 0.2f; // ldm
+            ctrs[core][6] = 0.0002f; // cmiss
+            ctrs[core][7] = 0.0001f; // bmiss
+            ctrs[core][8] = 5.7f; // uops
+            ctrs[core] = PPEPModel.readFile("testinput.txt", 9);
+        }
 
-        System.out.println("f(4) = " + powerf.apply(4));
-        System.out.println("f'(3) = " + powerf.derivative(3));
-
-        init(args[0] + "_power.pt", args[0] + "_bips.pt");
-        float[] flat = new float[1*1*2*10*9];
-        for (int i=0; i<2*10*9; i++){
-            flat[i] = (float)0.1;
-        }
-        float[] coefs = forward(flat);
-        for (int i=0; i<12; i++){
-            System.out.print(coefs[i] + ",");
-        }
-        System.out.println();
-        long curtimems=java.lang.System.currentTimeMillis();
-        for (int epc=0; epc<100; epc++){
-            coefs = forward(flat);
-        }
-        System.out.println("Time per inference: " + (float)(java.lang.System.currentTimeMillis() - curtimems)/100);
+        mymodel.compile(ctrs);
+        System.out.println("Predicted power: " + mymodel.predicted_power[0] + "," + mymodel.predicted_power[1]
+             + "; Gradient: " + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1]);
     }
 }
