@@ -109,7 +109,7 @@ class PPEPData:
             pkgvolt = pkgctrdata[:,:, 0]
             pkgbips = pkgstatdata[:,:,3]
             pkgutil = pkgstatdata[:,:,0]
-            pkgbcps = pkgutil * pkgctrdata[:,:,1]
+            pkgbcps = pkgutil * pkgctrdata[:,:,1] * 10 # bcps is also sum
             pkgstats = pkgstatdata[:,:,4:] * pkgbips[:,:,None]
             pkgstats = np.concatenate([pkgstats, pkgbips[:,:,None], pkgbcps[:,:,None]], axis=-1)
 
