@@ -165,6 +165,25 @@ public class PPEPModel {
         }
     }
 
+    public float[] getB2PGradients(float[] power, float[] bips){
+        float[] grads = new float[this.num_pkg];
+        for (int p=0; p<this.num_pkg; p++){
+            float bpp = bips[p]/power[p];
+            grads[p] = 2*bpp * this.dBIPSdP[p] - bpp*bpp;
+        }
+        return grads;
+        
+    }
+
+    public float[] getGlobalB2PGradients(float totalpower, float totalbips){
+        float[] grads = new float[this.num_pkg];
+        for (int p=0; p<this.num_pkg; p++){
+            float bpp = totalbips/totalpower;
+            grads[p] = 2*bpp * this.dBIPSdP[p] - bpp*bpp;
+        }
+        return grads;
+    }
+
     
     public static void main(String[] args){
         
@@ -206,8 +225,13 @@ public class PPEPModel {
                     }
                 }
                 mymodel.compile(ctrs);
+                float[] bips = new float[2];
+                bips[0] = ctrs[0][3]*10;
+                bips[1] = ctrs[10][3]*10;
+                float[] b2pgrads = mymodel.getB2PGradients(mymodel.predicted_power, bips);
                 System.out.println("Predicted power," + mymodel.predicted_power[0] + "," + mymodel.predicted_power[1]
-                    + ", Gradient," + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1]);
+                    + ", Gradient," + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1] +
+                    ",B2PGrad," + b2pgrads[0] + "," + b2pgrads[1] );
             }
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());

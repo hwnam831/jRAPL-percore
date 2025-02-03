@@ -82,7 +82,7 @@ class TraceCollectorThread extends Thread{
     int ctr_period;
     ReentrantLock lock;
     public ArrayDeque<PerfCounters> perfCounters;
-    public float[] moving_input;
+    public float[][] moving_input;
     public float[] moving_power;
     public float[] moving_dram;
     private int tracecount;
@@ -114,7 +114,7 @@ class TraceCollectorThread extends Thread{
         }
         perfCounters = new ArrayDeque<PerfCounters>();
         this.tracecount = 0;
-        moving_input = new float[threadNum*9];
+        moving_input = new float[threadNum][9];
         moving_power = new float[num_sockets];
         moving_dram = new float[num_sockets];
         for (int i=0; i<moving_power.length; i++){
@@ -122,7 +122,10 @@ class TraceCollectorThread extends Thread{
             moving_dram[i] = 0;
         }
         for (int i=0; i<moving_input.length; i++){
-            moving_input[i] = 0;
+            for (int c=0; c<9; c++){
+                moving_input[i][c] = 0;
+            }
+            
         }
 
     }
@@ -148,7 +151,7 @@ class TraceCollectorThread extends Thread{
                 alpha*pctr.pkgCtrs[pkg][0];
             for (int core=0; core<cps; core++){
                 for (int c=0; c<pctr.coreCtrs[0].length; c++){
-                    moving_input[offset + core*9 + c] = (1-alpha)*moving_input[offset+ core*9 + c] + 
+                    moving_input[pkg*cps + core][c] = (1-alpha)*moving_input[pkg*cps + core][c] +
                         alpha*pctr.coreCtrs[pkg*cps+core][c];
                 }
             }
