@@ -166,13 +166,11 @@ public class PPEPModel {
     }
 
     
-
     public static void main(String[] args){
-        if (args.length < 1){
-            System.out.println("usage: example-app <path-to-exported-script-module>\n");
-        }
+        
         //Test(args[0]);
         PPEPModel mymodel = new PPEPModel(2, 10, "ppep/idlemodel.txt", "ppep/vfpoly.txt","ppep/activecoef.txt");
+        
         float[][] ctrs = new float[20][9];
         for (int core=0; core < 20; core++){
             ctrs[core][0] = 0.83f; // volt
@@ -184,11 +182,36 @@ public class PPEPModel {
             ctrs[core][6] = 0.0002f; // cmiss
             ctrs[core][7] = 0.0001f; // bmiss
             ctrs[core][8] = 5.7f; // uops
-            ctrs[core] = PPEPModel.readFile("testinput.txt", 9);
+            //ctrs[core] = PPEPModel.readFile("testinput.txt", 9);
         }
 
         mymodel.compile(ctrs);
-        System.out.println("Predicted power: " + mymodel.predicted_power[0] + "," + mymodel.predicted_power[1]
-             + "; Gradient: " + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1]);
+        //System.out.println("Predicted power: " + mymodel.predicted_power[0] + "," + mymodel.predicted_power[1]
+        //     + "; Gradient: " + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1]);
+
+        try (BufferedReader reader = new BufferedReader(new FileReader("testinput.csv"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // Split the line by commas
+                String[] values = line.split(",");
+                // Parse each value as a float
+                for (int i=0; i<9; i++) {
+                    try {
+                        float number = Float.parseFloat(values[i].trim());
+                        for (int core=0; core < 20; core++)
+                            ctrs[core][i] = number;
+                        
+                    } catch (NumberFormatException e) {
+                        System.err.println("Warning: Skipping invalid number: " + values[i]);
+                    }
+                }
+                mymodel.compile(ctrs);
+                System.out.println("Predicted power," + mymodel.predicted_power[0] + "," + mymodel.predicted_power[1]
+                    + ", Gradient," + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1]);
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
