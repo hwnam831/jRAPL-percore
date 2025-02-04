@@ -67,11 +67,11 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "ml", "localml").setDefault("fair");
+                .choices("fair", "slurm", "ml", "localml", "ml2").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
-                .setDefault(50).help("Control period in ms");
+                .setDefault(100).help("Control period in ms");
         parser.addArgument("--lr").type(Double.class)
                 .setDefault(2.0).help("Gradient-to-powercap rate");
         parser.addArgument("--sampleperiod").type(Integer.class)
@@ -143,6 +143,7 @@ public class LocalController{
         double total_curpower = 0;
         double total_drampower = 0;
         double total_bips = 0;
+        float[] moving_grads = new float[num_pkg];
         for (int epc = 0; epc < epochs; epc++){
             total_drampower=0;
             total_curpower = 0;
@@ -215,8 +216,13 @@ public class LocalController{
             //float[] edp_gradients = mymodel.getB2PGradients(powerusage, curperf);
             if (policy.equals("localml")){
                 edp_gradients = mymodel.getB2PGradients(powerusage, curperf);
+            } else if (policy.equals("ml2")){
+                for (int i = 0; i<edp_gradients.length; i++){
+                    moving_grads[i] = (float)((1-alpha)*moving_grads[i] + alpha*edp_gradients[i]);
+                    edp_gradients[i] = moving_grads[i];
+                }
             }
-
+            
             records.newLine();
             
 
@@ -261,6 +267,76 @@ public class LocalController{
                 }
             } else if (policy.equals("ml")){
                 
+                double sum_newpl = 0;
+                double grad_sum=0;
+                
+                for (int i = 0; i<newpl.length; i++){
+                    grad_sum += edp_gradients[i];            
+                }
+                if (grad_sum > grad_max){
+                    lr = grad_max/grad_sum;
+                } else if(grad_sum < -grad_max){
+                    lr = -grad_max/grad_sum;
+                } else {
+                    lr = 1;
+                }
+                //
+                
+                for (int i = 0; i<newpl.length; i++){
+                    
+                    newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
+                    if (newpl[i] > power_max){
+                        newpl[i] = power_max;
+                    } else if (newpl[i] < power_min){
+                        newpl[i] = power_min;
+                    }
+                    sum_newpl += newpl[i];              
+                }
+                double remainder = 0;
+                int eff_len = newpl.length;
+                double[] coefs = new double[newpl.length];
+                if (sum_newpl > totalcap + tolerance){
+                    double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] -= delta;
+                        if (newpl[i] < power_min){
+                            remainder += power_min - newpl[i];
+                            eff_len--;
+                            newpl[i] = power_min;
+                            coefs[i] = 0;
+                        }else{
+                            coefs[i] = 1;
+                        }
+                    }
+                    for (int i = 0; i<newpl.length; i++){
+                        if(eff_len <= 0){
+                            break;
+                        }
+                        newpl[i] -= coefs[i]*remainder/eff_len;
+                    }
+                } else {
+                    double delta = (totalcap - sum_newpl)/newpl.length;
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] += delta/2;
+                    }
+                }
+                //corner-case: minimum freq
+                if (avgfreqs[0] < 8e5 && newpl[0] < curpl[0] + 0.5 && 
+                    avgfreqs[1] > 8e5  && newpl[1] > power_min){
+                    newpl[0] = curpl[0] + 0.5;
+                    if (newpl[0] + newpl[1] > totalcap){
+                        newpl[1] = totalcap - newpl[0];
+                    }
+                } else if (avgfreqs[1] < 8e5 && newpl[1] < curpl[1] + 0.5 &&
+                            avgfreqs[0] > 8e5 && newpl[0] > power_min){
+                    newpl[1] = curpl[1] + 0.5;
+                    if (newpl[0] + newpl[1] > totalcap){
+                        newpl[0] = totalcap - newpl[1];
+                    }
+                }
+
+            } else if (policy.equals("ml2")){
+                //ml2 is now moving grad
                 double sum_newpl = 0;
                 double grad_sum=0;
                 

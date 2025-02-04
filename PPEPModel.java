@@ -61,6 +61,7 @@ public class PPEPModel {
     public float[] vf_poly;
     public float[] active_coefs;
     public float[] predicted_power;
+    public float[] predicted_idle;
     public float[] dBIPSdP; // store it per core
     //float[][] active_coef_compiled; // compiled per core
     //float[][] mcpi;
@@ -104,6 +105,7 @@ public class PPEPModel {
         //this.cur_freq = new float[num_pkg][num_core];
         //this.cur_volt = new float[num_pkg][num_core];
         this.predicted_power = new float[num_pkg];
+        this.predicted_idle = new float[num_pkg];
         this.dBIPSdP = new float[num_pkg];
         
     }
@@ -144,7 +146,7 @@ public class PPEPModel {
                 float idle_power = this.idle_coefs[0]*voltage*voltage*voltage + 
                     this.idle_coefs[1]*voltage*voltage + this.idle_coefs[2]*voltage + this.idle_coefs[3];
                 
-                float dyn_power = active_coef_compiled * (1.25f*voltage*voltage*voltage + voltage);
+                float dyn_power = active_coef_compiled * ((1/0.512f)*voltage*voltage*voltage + voltage);
                 idle_power /= this.num_core; //currently, idle power is a per-package model
                 
                 pkg_idle_power += idle_power;
@@ -154,7 +156,7 @@ public class PPEPModel {
                 float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
                 float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
-                float dPdyndB = dyn_power/bips + active_coef_compiled * (2.4f*voltage*voltage + 1) * dVdB;
+                float dPdyndB = dyn_power/bips + active_coef_compiled * ((3/0.512f)*voltage*voltage + 1) * dVdB;
                 float dPidledB = (3*this.idle_coefs[0]*voltage*voltage + 2*this.idle_coefs[1]*voltage + this.idle_coefs[2]) * dVdB / this.num_core;
                 this.dBIPSdP[p] += 1/(dPdyndB + dPidledB)/this.num_core;
                 //this.dBIPSdP[p] += 1/dPdyndB;
@@ -162,6 +164,7 @@ public class PPEPModel {
                 
             }
             this.predicted_power[p] = pkg_dyn_power + pkg_idle_power;
+            this.predicted_idle[p] = pkg_idle_power;
         }
     }
 
