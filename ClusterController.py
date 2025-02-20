@@ -305,8 +305,8 @@ if __name__ == '__main__':
                     pool += 0.5*diff* beta
                     nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] - 0.5*diff* beta
             for c in clients:
-                nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] + pool/len(clients)
-                nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] + pool/len(clients)
+                nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] + pool/len(clients)/2
+                nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] + pool/len(clients)/2
         elif args.policy == 'fair':
             for c in clients:
                 nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
