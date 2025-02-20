@@ -1,5 +1,5 @@
 #Usage: clusterexp.sh [policy] [limit]
-PERNODECAP=$(($2/4))
+PERNODECAP=$(($2/2))
 #cd /mydata/workspace/faas-profiler;
 #./WorkloadInvoker -c warmup.json & sleep 70;
 cd /mydata/workspace/jrapl;
