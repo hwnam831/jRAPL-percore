@@ -67,7 +67,7 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "ml", "localml", "ml2").setDefault("fair");
+                .choices("fair", "slurm", "ml", "localml", "ml2", "central").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
@@ -79,7 +79,7 @@ public class LocalController{
         parser.addArgument("--duration").type(Integer.class)
                 .setDefault(60).help("Time duration in seconds");
         parser.addArgument("--graceperiod").type(Integer.class)
-                .setDefault(5).help("Do not control ultil certain seconds");
+                .setDefault(5).help("Do not control until certain seconds");
         parser.addArgument("--alpha").type(Double.class)
                 .setDefault(0.25).help("Adjustment rate to make PL and power closer");
         parser.addArgument("--tag").type(String.class)
@@ -101,7 +101,9 @@ public class LocalController{
         int timeperiodms = (Integer)res.get("period");
         int sampleperiodms = (Integer)res.get("sampleperiod");
         
-        PowerControllerThread powerController = new PowerControllerThread((Integer)res.get("cap"),timeperiodms, (String)res.get("parent"));
+        String policy = (String) res.get("policy");
+        boolean centralized = policy.equals("central");
+        PowerControllerThread powerController = new PowerControllerThread((Integer)res.get("cap"),timeperiodms, (String)res.get("parent"), centralized);
         double[] curpl = powerController.curpl.limits.clone();
         float[] powerusage = new float[curpl.length];
         float[] drampower = new float[curpl.length];
@@ -109,7 +111,7 @@ public class LocalController{
         double tolerance = 0.0;
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         int graceepochs = ((Integer)res.get("graceperiod")*1000)/timeperiodms;
-        String policy = (String) res.get("policy");
+        
         String tag = (String) res.get("tag");
         TraceCollectorThread traceCollector = new TraceCollectorThread(16, sampleperiodms, policy 
             +"-" + tag + "-" + (Integer)res.get("cap") + "W-raw.csv", timeperiodms);
@@ -442,6 +444,7 @@ public class LocalController{
                     powerController.curpl.usages[pkg] = cpupower[pkg];
                     powerController.curpl.bips[pkg] = curperf[pkg];
                     powerController.curpl.dBdP[pkg] = mymodel.dBIPSdP[pkg];
+                    powerController.curpl.util[pkg] = curutil[pkg];
                 }
                 powerController.curpl.notify();
             }
@@ -468,12 +471,14 @@ class NodeStatus{
     public int numSocket;
     public double[] bips;
     public double[] dBdP;
+    public double[] util;
     public NodeStatus(int num_sockets){
         numSocket=num_sockets;
         limits = new double[num_sockets];
         usages = new double[num_sockets];
         bips = new double[num_sockets];
         dBdP = new double[num_sockets];
+        util = new double[num_sockets];
     }
 }
 class PowerControllerThread extends Thread{
@@ -487,10 +492,11 @@ class PowerControllerThread extends Thread{
     public final int default_timewindow = 1000;
     int num_sockets;
     boolean running = true;
+    boolean centralized = false;
     String parentip;
     double totalcap;
     int timeperiodms;
-    public PowerControllerThread(double powerlimit, int timeperiod, String parentip){
+    public PowerControllerThread(double powerlimit, int timeperiod, String parentip, boolean centralized){
         timeperiodms=timeperiod;
         num_sockets = EnergyCheckUtils.GetSocketNum();
         pl1 = new double[num_sockets];
@@ -498,6 +504,7 @@ class PowerControllerThread extends Thread{
         curpl = new NodeStatus(num_sockets);
         this.parentip = parentip;
         this.totalcap = powerlimit;
+        this.centralized = centralized;
         for (int s = 0; s<num_sockets; s++){
             double[] limitinfo = EnergyCheckUtils.GetPkgLimit(s);
             pl1[s] = limitinfo[0];
@@ -538,7 +545,10 @@ class PowerControllerThread extends Thread{
                     totaldBdP += curpl.dBdP[pkg];
                     total_curpower += curpl.usages[pkg];
             }
-            String message = String.format("%f,%f,%f",total_curpower,totalBIPS,totaldBdP);
+            
+            String message = String.format("%f,%f,%f,%f,%f,%f,%f,%f",
+                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.dBdP[0],
+                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.dBdP[0]);
 
             if (!parentip.equals("")){
                 try{
@@ -549,7 +559,16 @@ class PowerControllerThread extends Thread{
                     DataOutputStream dout=new DataOutputStream(s.getOutputStream());   
                     dout.writeUTF(message);
                     String newPKGLimit = reader.readLine();
-                    totalcap = Double.parseDouble(newPKGLimit.split(":")[1]);
+                    String[] limits = newPKGLimit.split(",");
+                    double cap0 = Double.parseDouble(limits[0]);
+                    double cap1 = Double.parseDouble(limits[1]);
+                    totalcap = cap0 + cap1;
+                    if (this.centralized){
+                        synchronized(curpl){
+                            curpl.limits[0] = cap0;
+                            curpl.limits[1] = cap1;
+                        }
+                    }
                     reader.close();
                     dout.close();
                     s.close();
