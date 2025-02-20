@@ -552,7 +552,7 @@ class PowerControllerThread extends Thread{
             
             String message = String.format("%f,%f,%f,%f,%f,%f,%f,%f",
                     curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.dBdP[0],
-                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.dBdP[0]);
+                    curpl.usages[1],curpl.bips[1],curpl.util[1],curpl.dBdP[1]);
 
             if (!parentip.equals("")){
                 try{
