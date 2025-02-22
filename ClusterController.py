@@ -121,7 +121,7 @@ def ControllerServer():
     serverSocket.close()
 
 power_max = 105
-power_min = 26
+power_min = 20
 grad_max = 5.0
 alpha = 0.25
 default_lr = 4.0
@@ -278,6 +278,11 @@ if __name__ == '__main__':
                         eff_len = eff_len -1
                         newpl = power_min
                         coefs[c][0] = 0
+                    elif nodeStatuses[c]['Freq:0'] < min_freq:
+                        remainder += nodeStatuses[c]['Limit:0'] + 0.5 - newpl
+                        eff_len = eff_len -1
+                        newpl = nodeStatuses[c]['Limit:0'] + 0.5
+                        coefs[c][0] = 0
                     else:
                         coefs[c][0] = 1
                     nodeStatuses[c]['Limit:0'] = newpl
@@ -286,6 +291,11 @@ if __name__ == '__main__':
                         remainder += power_min - newpl
                         eff_len = eff_len -1
                         newpl = power_min
+                        coefs[c][1] = 0
+                    elif nodeStatuses[c]['Freq:1'] < min_freq:
+                        remainder += nodeStatuses[c]['Limit:1'] + 0.5 - newpl
+                        eff_len = eff_len -1
+                        newpl = nodeStatuses[c]['Limit:1'] + 0.5
                         coefs[c][1] = 0
                     else:
                         coefs[c][1] = 1
@@ -328,12 +338,12 @@ if __name__ == '__main__':
     headerstr = ['Time(ms)']
     for c in clients:
         clientcount += 1
-        headerstr += ['Limit:' + str(clientcount) + "0:",'Consumption:' + str(clientcount) + "0:",
-                      'BIPS:' + str(clientcount) + "0:",'Util:' + str(clientcount) + "0:",
-                      'Freq:' + str(clientcount) + "0:",'Grad:' + str(clientcount) + "0:"]
-        headerstr += ['Limit:' + str(clientcount) + "1:",'Consumption:' + str(clientcount) + "1:",
-                      'BIPS:' + str(clientcount) + "1:",'Util:' + str(clientcount) + "1:",
-                      'Freq:' + str(clientcount) + "1:",'Grad:' + str(clientcount) + "1:"]
+        headerstr += ['Limit:' + str(clientcount) + ":0",'Consumption:' + str(clientcount) + ":0",
+                      'BIPS:' + str(clientcount) + ":0",'Util:' + str(clientcount) + ":0",
+                      'Freq:' + str(clientcount) + ":0",'Grad:' + str(clientcount) + ":0"]
+        headerstr += ['Limit:' + str(clientcount) + ":1",'Consumption:' + str(clientcount) + ":1",
+                      'BIPS:' + str(clientcount) + ":1",'Util:' + str(clientcount) + ":1",
+                      'Freq:' + str(clientcount) + ":1",'Grad:' + str(clientcount) + ":1"]
     print(','.join(headerstr))
     print(clients, file=sys.stderr)
     controllerserver.join()
