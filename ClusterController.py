@@ -50,11 +50,13 @@ def ControllerServer():
                 'Consumption:0' : clusterPowerLimit/len(clients)/2,
                 'BIPS:0' : 0.0,
                 'Util:0' : 1.0,
+                'Freq:0' : 2.0,
                 'dBIPS/dPower:0' : 0.0,
                 'Limit:1' : clusterPowerLimit/len(clients)/2,
                 'Consumption:1' : clusterPowerLimit/len(clients)/2,
                 'BIPS:1' : 0.0,
                 'Util:1' : 1.0,
+                'Freq:0' : 2.0,
                 'dBIPS/dPower:1' : 0.0,
             }
             for c in clients:
@@ -75,12 +77,14 @@ def ControllerServer():
                 nodeStatuses[clientAddress]['Consumption:0'] = float(dataStrList[0])
                 nodeStatuses[clientAddress]['BIPS:0'] = float(dataStrList[1])
                 nodeStatuses[clientAddress]['Util:0'] = float(dataStrList[2])
-                nodeStatuses[clientAddress]['dBIPS/dPower:0'] = float(dataStrList[3])
+                nodeStatuses[clientAddress]['Freq:0'] = float(dataStrList[3])
+                nodeStatuses[clientAddress]['dBIPS/dPower:0'] = float(dataStrList[4])
 
-                nodeStatuses[clientAddress]['Consumption:1'] = float(dataStrList[4])
-                nodeStatuses[clientAddress]['BIPS:1'] = float(dataStrList[5])
-                nodeStatuses[clientAddress]['Util:1'] = float(dataStrList[6])
-                nodeStatuses[clientAddress]['dBIPS/dPower:1'] = float(dataStrList[7])
+                nodeStatuses[clientAddress]['Consumption:1'] = float(dataStrList[5])
+                nodeStatuses[clientAddress]['BIPS:1'] = float(dataStrList[6])
+                nodeStatuses[clientAddress]['Util:1'] = float(dataStrList[7])
+                nodeStatuses[clientAddress]['Freq:1'] = float(dataStrList[8])
+                nodeStatuses[clientAddress]['dBIPS/dPower:1'] = float(dataStrList[9])
             else:
                 nodeStatuses[clientAddress]['Consumption:0'] = \
                     nodeStatuses[clientAddress]['Consumption:0'] * 0.75 + 0.25 * float(dataStrList[0])
@@ -88,17 +92,21 @@ def ControllerServer():
                     nodeStatuses[clientAddress]['BIPS:0'] * 0.75 + 0.25 * float(dataStrList[1])
                 nodeStatuses[clientAddress]['Util:0'] = \
                     nodeStatuses[clientAddress]['Util:0'] * 0.75 + 0.25 * float(dataStrList[2])
+                nodeStatuses[clientAddress]['Freq:0'] = \
+                    nodeStatuses[clientAddress]['Freq:0'] * 0.75 + 0.25 * float(dataStrList[3])
                 nodeStatuses[clientAddress]['dBIPS/dPower:0'] = \
-                    nodeStatuses[clientAddress]['dBIPS/dPower:0'] * 0.75 + 0.25 * float(dataStrList[3])
+                    nodeStatuses[clientAddress]['dBIPS/dPower:0'] * 0.75 + 0.25 * float(dataStrList[4])
 
                 nodeStatuses[clientAddress]['Consumption:1'] = \
-                    nodeStatuses[clientAddress]['Consumption:1'] * 0.75 + 0.25 * float(dataStrList[4])
+                    nodeStatuses[clientAddress]['Consumption:1'] * 0.75 + 0.25 * float(dataStrList[5])
                 nodeStatuses[clientAddress]['BIPS:1'] = \
-                    nodeStatuses[clientAddress]['BIPS:1'] * 0.75 + 0.25 * float(dataStrList[5])
+                    nodeStatuses[clientAddress]['BIPS:1'] * 0.75 + 0.25 * float(dataStrList[6])
                 nodeStatuses[clientAddress]['Util:1'] = \
-                    nodeStatuses[clientAddress]['Util:1'] * 0.75 + 0.25 * float(dataStrList[6])
+                    nodeStatuses[clientAddress]['Util:1'] * 0.75 + 0.25 * float(dataStrList[7])
+                nodeStatuses[clientAddress]['Freq:1'] = \
+                    nodeStatuses[clientAddress]['Freq:1'] * 0.75 + 0.25 * float(dataStrList[8])
                 nodeStatuses[clientAddress]['dBIPS/dPower:1'] = \
-                    nodeStatuses[clientAddress]['dBIPS/dPower:1'] * 0.75 + 0.25 * float(dataStrList[7])
+                    nodeStatuses[clientAddress]['dBIPS/dPower:1'] * 0.75 + 0.25 * float(dataStrList[9])
             lockStatus.release()
             
             
@@ -113,10 +121,11 @@ def ControllerServer():
     serverSocket.close()
 
 power_max = 105
-power_min = 17
+power_min = 26
 grad_max = 5.0
-alpha = 0.2
+alpha = 0.25
 default_lr = 4.0
+min_freq = 1.2
 
 def printcsv(starttime):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -130,10 +139,10 @@ def printcsv(starttime):
     for c in clients:
         b2p_grads = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower)
         csvlines += [str(nodeStatuses[c]['Limit:0']),str(nodeStatuses[c]['Consumption:0']),
-                     str(nodeStatuses[c]['BIPS:0']),str(nodeStatuses[c]['Util:0']),str(b2p_grads)]
+                     str(nodeStatuses[c]['BIPS:0']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:0']),str(b2p_grads)]
         b2p_grads = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower)
         csvlines += [str(nodeStatuses[c]['Limit:1']),str(nodeStatuses[c]['Consumption:1']),
-                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:0']),str(b2p_grads)]
+                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:1']),str(b2p_grads)]
     print(','.join(csvlines))
 
 
@@ -319,12 +328,12 @@ if __name__ == '__main__':
     headerstr = ['Time(ms)']
     for c in clients:
         clientcount += 1
-        headerstr += ['Limit:' + "0:" + str(clientcount),'Consumption:' + "0:" + str(clientcount),
-                      'BIPS:' + "0:" + str(clientcount),'Util:' + "0:" + str(clientcount),
-                      'Grad:' + "0:" + str(clientcount)]
-        headerstr += ['Limit:' + "1:" + str(clientcount),'Consumption:' + "1:" + str(clientcount),
-                      'BIPS:' + "1:" + str(clientcount),'Util:' + "1:" + str(clientcount),
-                      'Grad:' + "1:" + str(clientcount)]
+        headerstr += ['Limit:' + str(clientcount) + "0:",'Consumption:' + str(clientcount) + "0:",
+                      'BIPS:' + str(clientcount) + "0:",'Util:' + str(clientcount) + "0:",
+                      'Freq:' + str(clientcount) + "0:",'Grad:' + str(clientcount) + "0:"]
+        headerstr += ['Limit:' + str(clientcount) + "1:",'Consumption:' + str(clientcount) + "1:",
+                      'BIPS:' + str(clientcount) + "1:",'Util:' + str(clientcount) + "1:",
+                      'Freq:' + str(clientcount) + "1:",'Grad:' + str(clientcount) + "1:"]
     print(','.join(headerstr))
     print(clients, file=sys.stderr)
     controllerserver.join()

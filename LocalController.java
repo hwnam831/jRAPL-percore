@@ -56,6 +56,7 @@ public class LocalController{
     public static final float grad_max = 5.0f;
     public static final double power_min = 18;
     public static final double power_max = 105;
+    public static final float freq_min= 10e5f;
     public static String arrToStr(float[] arr){
         return Arrays.toString(arr).replace('[', ' ').replace(']',' ');
     }
@@ -323,14 +324,14 @@ public class LocalController{
                     }
                 }
                 //corner-case: minimum freq
-                if (avgfreqs[0] < 8e5 && newpl[0] < curpl[0] + 0.5 && 
-                    avgfreqs[1] > 8e5  && newpl[1] > power_min){
+                if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 0.5 && 
+                    avgfreqs[1] > freq_min  && newpl[1] > power_min){
                     newpl[0] = curpl[0] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[1] = totalcap - newpl[0];
                     }
-                } else if (avgfreqs[1] < 8e5 && newpl[1] < curpl[1] + 0.5 &&
-                            avgfreqs[0] > 8e5 && newpl[0] > power_min){
+                } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 0.5 &&
+                            avgfreqs[0] > freq_min && newpl[0] > power_min){
                     newpl[1] = curpl[1] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[0] = totalcap - newpl[1];
@@ -393,14 +394,14 @@ public class LocalController{
                     }
                 }
                 //corner-case: minimum freq
-                if (avgfreqs[0] < 8e5 && newpl[0] < curpl[0] + 0.5 && 
-                    avgfreqs[1] > 8e5  && newpl[1] > power_min){
+                if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 0.5 && 
+                    avgfreqs[1] > freq_min  && newpl[1] > power_min){
                     newpl[0] = curpl[0] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[1] = totalcap - newpl[0];
                     }
-                } else if (avgfreqs[1] < 8e5 && newpl[1] < curpl[1] + 0.5 &&
-                            avgfreqs[0] > 8e5 && newpl[0] > power_min){
+                } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 0.5 &&
+                            avgfreqs[0] > freq_min && newpl[0] > power_min){
                     newpl[1] = curpl[1] + 0.5;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[0] = totalcap - newpl[1];
@@ -449,6 +450,7 @@ public class LocalController{
                     powerController.curpl.bips[pkg] = curperf[pkg];
                     powerController.curpl.dBdP[pkg] = mymodel.dBIPSdP[pkg];
                     powerController.curpl.util[pkg] = curutil[pkg];
+                    powerController.curpl.freq[pkg] = avgfreqs[pkg];
                 }
                 powerController.curpl.notify();
             }
@@ -476,6 +478,7 @@ class NodeStatus{
     public double[] bips;
     public double[] dBdP;
     public double[] util;
+    public double[] freq;
     public NodeStatus(int num_sockets){
         numSocket=num_sockets;
         limits = new double[num_sockets];
@@ -483,6 +486,7 @@ class NodeStatus{
         bips = new double[num_sockets];
         dBdP = new double[num_sockets];
         util = new double[num_sockets];
+        freq = new double[num_sockets];
     }
 }
 class PowerControllerThread extends Thread{
@@ -550,9 +554,9 @@ class PowerControllerThread extends Thread{
                     total_curpower += curpl.usages[pkg];
             }
             
-            String message = String.format("%f,%f,%f,%f,%f,%f,%f,%f",
-                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.dBdP[0],
-                    curpl.usages[1],curpl.bips[1],curpl.util[1],curpl.dBdP[1]);
+            String message = String.format("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
+                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.freq[0]/1e6f,curpl.dBdP[0],
+                    curpl.usages[1],curpl.bips[1],curpl.util[1],curpl.freq[1]/1e6f,curpl.dBdP[1]);
 
             if (!parentip.equals("")){
                 try{
