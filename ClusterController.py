@@ -125,7 +125,7 @@ power_min = 20
 grad_max = 5.0
 alpha = 0.25
 default_lr = 4.0
-min_freq = 1.2
+min_freq = 1.0
 
 def printcsv(starttime):
     csvlines=[str(int((time.time()-starttime)*1000))]
