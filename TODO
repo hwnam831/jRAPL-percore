@@ -1,7 +1,5 @@
-linear regression container
-deterministic high low med rotate
-print latency and throughput of workload
-Power without cap
-Sweep of multiple applications
-More aggressive policy?
-Apps that consume more power
+Debug local control first (cnn-serving? low-power scenarios, frequency guarding)
+Inject idle periods (until slurm is better than fair)
+Different gradient estimations (Just bips/dynpower?)
+high-high and low-low
+hyperparameter tuning (alpha? lr? min_power? min_freq?)

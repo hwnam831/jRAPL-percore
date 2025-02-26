@@ -123,8 +123,8 @@ def ControllerServer():
 power_max = 105
 power_min = 20
 grad_max = 5.0
-alpha = 0.25
-default_lr = 4.0
+alpha = 0.2
+default_lr = 2.0
 min_freq = 1.0
 
 def printcsv(starttime):
@@ -148,12 +148,12 @@ def printcsv(starttime):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','fair','tokensmart','hierarchical'],
+    parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','fair','tokensmart','hierarchical','geoml'],
                 default='fair',help="policy")
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='1000',help="time period in milliseconds")
+                default='500',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
@@ -207,12 +207,16 @@ if __name__ == '__main__':
             for c in clients:
                 grad_sum += b2p_grads[c][0] + b2p_grads[c][0]
                 
-            if grad_sum > grad_max:
-                lr = default_lr * grad_max/grad_sum 
+            for c in clients:
+                grad_sum += b2p_grads[c][0] + b2p_grads[c][1]
+                
+            if grad_sum > grad_max * len(clients):
+                lr = default_lr * grad_max * len(clients)/grad_sum 
             elif grad_sum < -grad_max:
-                lr = -default_lr * grad_max/grad_sum
+                lr = -default_lr * grad_max * len(clients)/grad_sum
             else:
                 lr = default_lr
+
 
             for c in clients:
                 curpl = nodeStatuses[c]['Limit:0'] + nodeStatuses[c]['Limit:1']
@@ -234,21 +238,22 @@ if __name__ == '__main__':
                     nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] - delta
                     nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] - delta
             else:
-                delta = (sum_newpl - clusterPowerLimit)/len(clients)/2
+                excess = (clusterPowerLimit - sum_newpl)/len(clients)/2
                 for c in clients:
-                    nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] - delta/4
-                    nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] - delta/4
+                    nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] + excess
+                    nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] + excess
         elif args.policy == "ml":
+            
             sum_newpl = 0
             grad_sum=0
             
             for c in clients:
                 grad_sum += b2p_grads[c][0] + b2p_grads[c][1]
                 
-            if grad_sum > grad_max:
-                lr = default_lr * grad_max/grad_sum 
+            if grad_sum > grad_max * len(clients):
+                lr = default_lr * grad_max * len(clients)/grad_sum 
             elif grad_sum < -grad_max:
-                lr = -default_lr * grad_max/grad_sum
+                lr = -default_lr * grad_max * len(clients)/grad_sum
             else:
                 lr = default_lr
 
@@ -266,6 +271,88 @@ if __name__ == '__main__':
                 newpl = min(power_max, newpl)
                 sum_newpl += newpl
                 nodeStatuses[c]['Limit:1'] = newpl
+            remainder = 0
+            eff_len = len(clients)*2
+            coefs = {c:[1,1] for c in clients}
+            if sum_newpl > clusterPowerLimit:
+                delta = (sum_newpl - clusterPowerLimit)/len(clients)/2
+                for c in clients:
+                    newpl = nodeStatuses[c]['Limit:0'] - delta
+                    
+                    if nodeStatuses[c]['Freq:0'] < min_freq:
+                        remainder += nodeStatuses[c]['Limit:0'] + 1 - newpl
+                        eff_len = eff_len -1
+                        newpl = nodeStatuses[c]['Limit:0'] + 1
+                        coefs[c][0] = 0
+                    elif newpl < power_min:
+                        remainder += power_min - newpl
+                        eff_len = eff_len -1
+                        newpl = power_min
+                        coefs[c][0] = 0
+                    else:
+                        coefs[c][0] = 1
+                    nodeStatuses[c]['Limit:0'] = newpl
+                    newpl = nodeStatuses[c]['Limit:1'] - delta
+                    
+                    if nodeStatuses[c]['Freq:1'] < min_freq:
+                        remainder += nodeStatuses[c]['Limit:1'] + 1 - newpl
+                        eff_len = eff_len -1
+                        newpl = nodeStatuses[c]['Limit:1'] + 1
+                        coefs[c][1] = 0
+                    elif newpl < power_min:
+                        remainder += power_min - newpl
+                        eff_len = eff_len -1
+                        newpl = power_min
+                        coefs[c][1] = 0
+                    else:
+                        coefs[c][1] = 1
+                    nodeStatuses[c]['Limit:1'] = newpl
+                for c in clients:
+                    if eff_len <= 0:
+                        break
+                    nodeStatuses[c]['Limit:0'] -= coefs[c][0]*remainder/eff_len
+                    nodeStatuses[c]['Limit:1'] -= coefs[c][1]*remainder/eff_len
+            
+        elif args.policy == "geoml":
+            sum_newpl = 0
+            grad_sum=0
+            
+            for c in clients:
+                grad_sum += b2p_grads[c][0] + b2p_grads[c][1]
+                
+            if grad_sum > grad_max * len(clients):
+                lr = default_lr * grad_max * len(clients)/grad_sum 
+            elif grad_sum < -grad_max:
+                lr = -default_lr * grad_max * len(clients)/grad_sum
+            else:
+                lr = default_lr
+
+            geomb2p = 1
+
+            for c in clients:
+                b2p0 = 1.0 + nodeStatuses[c]['BIPS:0'] * nodeStatuses[c]['BIPS:0'] / nodeStatuses[c]['Consumption:0']
+                b2p1 = 1.0 + nodeStatuses[c]['BIPS:1'] * nodeStatuses[c]['BIPS:1'] / nodeStatuses[c]['Consumption:1']
+                geomb2p = geomb2p * ((b2p0 * b2p1) ** (0.5/len(clients)))
+            for c in clients:
+                curpl = nodeStatuses[c]['Limit:0']
+                bpw = nodeStatuses[c]['BIPS:0'] / nodeStatuses[c]['Consumption:0']
+                b2p = 1.0 + nodeStatuses[c]['BIPS:0'] * bpw
+                grads0 = ((2*bpw*nodeStatuses[c]['dBIPS/dPower:0'] - bpw*bpw)) * geomb2p / b2p
+                newpl = curpl - alpha*(curpl - nodeStatuses[c]['Consumption:0']) + lr*grads0
+                newpl = max(power_min, newpl)
+                newpl = min(power_max, newpl)
+                sum_newpl += newpl
+                nodeStatuses[c]['Limit:0'] = newpl
+
+                curpl = nodeStatuses[c]['Limit:1']
+                bpw = nodeStatuses[c]['BIPS:1'] / nodeStatuses[c]['Consumption:1']
+                b2p = 1.0 + nodeStatuses[c]['BIPS:1'] * bpw
+                grads1 = ((2*bpw*nodeStatuses[c]['dBIPS/dPower:1'] - bpw*bpw)) * geomb2p / b2p
+                newpl = curpl - alpha*(curpl - nodeStatuses[c]['Consumption:1']) + lr*grads1
+                newpl = max(power_min, newpl)
+                newpl = min(power_max, newpl)
+                sum_newpl += newpl
+                nodeStatuses[c]['Limit:0'] = newpl
             remainder = 0
             eff_len = len(clients)*2
             coefs = {c:[1,1] for c in clients}
@@ -305,12 +392,12 @@ if __name__ == '__main__':
                         break
                     nodeStatuses[c]['Limit:0'] -= coefs[c][0]*remainder/eff_len
                     nodeStatuses[c]['Limit:1'] -= coefs[c][1]*remainder/eff_len
-
             else:
                 delta = (sum_newpl - clusterPowerLimit)/len(clients)/2
                 for c in clients:
                     nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] - delta/4
                     nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] - delta/4
+            
         elif args.policy == 'slurm':
             pool = 0.0
             beta = len(clients) / (len(clients) - 0.99)
