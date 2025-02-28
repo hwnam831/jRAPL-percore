@@ -153,7 +153,7 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='500',help="time period in milliseconds")
+                default='1000',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,

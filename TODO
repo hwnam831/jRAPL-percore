@@ -3,3 +3,7 @@ Inject idle periods (until slurm is better than fair)
 Different gradient estimations (Just bips/dynpower?)
 high-high and low-low
 hyperparameter tuning (alpha? lr? min_power? min_freq?)
+Tokensmart
+Record per-request latencies
+Create Poisson distribution for this
+Increase control period (centralized vs hierarchical)
