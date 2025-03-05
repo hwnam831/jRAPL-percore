@@ -5,6 +5,7 @@ import threading
 import argparse
 import signal
 import sys
+import copy
 
 
 myPort = 4545
@@ -145,6 +146,25 @@ def printcsv(starttime):
                      str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:1']),str(b2p_grads)]
     print(','.join(csvlines))
 
+# 20 Tokens total
+# 12 tokens by default
+def requiredTokens(util, prevutil, bips, prevbips, token, prevtoken):
+    if token - prevtoken == 1:
+        if bips > prevbips:
+            return int(util * 20)
+        else:
+            return prevtoken
+    elif prevtoken - token == 1:
+        if bips < prevbips:
+            return int(util * 20)
+        else:
+            return prevtoken
+    elif util > prevutil:
+        return token + 1
+    elif util < prevutil:
+        return token - 1
+    else:
+        return int(util * 20)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -172,6 +192,16 @@ if __name__ == '__main__':
     starttime = time.time()
     if args.duration > 0:
         deadline = starttime + args.duration
+    tokens = {}
+    prevtokens = {}
+
+    prevutils = {}
+
+    prevbips = {}
+    tokenpool = 0
+    starvationThreshold = 32
+
+
     while serverRunning:
         sleeptime = max(nextTime - time.time(), 0.0001)
         time.sleep(sleeptime)
@@ -190,11 +220,18 @@ if __name__ == '__main__':
         totalbips = 0.0
         totalpower = 1e-6
         b2p_grads = {}
+        
         for c in clients:
             totalbips += nodeStatuses[c]['BIPS:0']
             totalbips += nodeStatuses[c]['BIPS:1']
             totalpower += nodeStatuses[c]['Consumption:0']
             totalpower += nodeStatuses[c]['Consumption:1']
+            if not c in tokens:
+                tokens[c] = [12,12]
+                prevtokens[c] = [12,12]
+                prevutils[c] = [nodeStatuses[c]['Util:0'],nodeStatuses[c]['Util:1']]
+                prevbips[c] = [nodeStatuses[c]['BIPS:0'],nodeStatuses[c]['BIPS:1']]
+            
         for c in clients:
             b2p0 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower))
             b2p1 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower))
@@ -416,6 +453,42 @@ if __name__ == '__main__':
         elif args.policy == 'fair':
             for c in clients:
                 nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
+        elif args.policy == 'tokensmart':
+            for c in clients:
+                for soc in range(2):
+                    fairModeEnabled = False
+                    reqtokens = requiredTokens(nodeStatuses[c]['Util:' + str(soc)], 
+                                               prevutils[c][soc], nodeStatuses[c]['BIPS:'+str(soc)], 
+                                               prevbips[c][soc], tokens[c][soc], prevtokens[c][soc])
+                    if reqtokens < tokens[c][soc]:
+                        tokenpool = tokenpool + (tokens[c][soc] - reqtokens)
+                    else:
+                        if tokenpool <= 0:
+                            starvationThreshold -= 1
+                            if starvationThreshold <= 0:
+                                fairModeEnabled = True
+                            reqtokens = tokens[c][soc]
+                        else:
+                            extratokens = min(reqtokens - tokens[c][soc], tokenpool)
+                            tokenpool -= extratokens
+                            reqtokens = tokens[c][soc] + extratokens
+                            starvationThreshold = 32
+                            if fairModeEnabled:
+                                fairModeEnabled = False
+                    if fairModeEnabled:
+                        if tokens[c][soc] > 12:
+                            reqtokens = 12
+                            tokenpool += tokens[c][soc] - 12
+                        else:
+                            reqtokens = tokens[c][soc]
+                    prevtokens[c][soc] = tokens[c][soc]
+                    tokens[c][soc] = reqtokens
+                
+            for c in clients:
+                powrange = clusterPowerLimit/len(clients)/2 - power_min
+                nodeStatuses[c]['Limit:0'] = 20 + powrange * tokens[c][0] / 12
+                nodeStatuses[c]['Limit:1'] = 20 + powrange * tokens[c][1] / 12
+                
         else:
             pass
         lockStatus.release()
