@@ -39,7 +39,8 @@ def print_b2p(folder_path):
         folder_path (str): Path to the folder containing CSV files
     """
     # Get a list of all CSV files in the folder
-    csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
+    os.chdir(folder_path)
+    csv_files = glob.glob("*.csv")
     
     if not csv_files:
         print(f"No CSV files found in {folder_path}")
@@ -52,31 +53,33 @@ def print_b2p(folder_path):
         df = pd.read_csv(csv_file)
         bipscols = []
         powcols = []
+        try:
+            for node in (1,2,3,4):
+                for soc in (0,1):
+                    bipscols.append(df[f"BIPS:{node}:{soc}"])
+                    powcols.append(df[f"Consumption:{node}:{soc}"])
 
-        for node in (1,2,3,4):
-            for soc in (0,1):
-                bipscols.append(df[f"BIPS:{node}:{soc}"])
-                powcols.append(df[f"Consumption:{node}:{soc}"])
+            totalbips = bipscols[0] + bipscols[1] + bipscols[2] + bipscols[3] + \
+                        bipscols[4] + bipscols[5] + bipscols[6] + bipscols[7]
+            totalpower = powcols[0] + powcols[1] + powcols[2] + powcols[3] + \
+                        powcols[4] + powcols[5] + powcols[6] + powcols[7]
+            geombips = bipscols[0] * bipscols[1] * bipscols[2] * bipscols[3] * \
+                        bipscols[4] * bipscols[5] * bipscols[6] * bipscols[7]
+            geompow = powcols[0] * powcols[1] * powcols[2] * powcols[3] * \
+                            powcols[4] * powcols[5] * powcols[6] * powcols[7]
+            geomb2p = (geombips ** (1/4)) / (geompow ** (1/8))
+            totalb2p = totalbips**2 / totalpower
 
-        totalbips = bipscols[0] + bipscols[1] + bipscols[2] + bipscols[3] + \
-                    bipscols[4] + bipscols[5] + bipscols[6] + bipscols[7]
-        totalpower = powcols[0] + powcols[1] + powcols[2] + powcols[3] + \
-                    powcols[4] + powcols[5] + powcols[6] + powcols[7]
-        geombips = bipscols[0] * bipscols[1] * bipscols[2] * bipscols[3] * \
-                    bipscols[4] * bipscols[5] * bipscols[6] * bipscols[7]
-        geompow = powcols[0] * powcols[1] * powcols[2] * powcols[3] * \
-                    powcols[4] * powcols[5] * powcols[6] * powcols[7]
-        geomb2p = (geombips ** (1/4)) / (geompow ** (1/8))
-        totalb2p = totalbips**2 / totalpower
-
-        # Check if 'BIPS' column exists
-        b2p = totalbips*totalbips/totalpower
-        filename_parts = csv_file[:-4].split('_')
-        csvparts = str.join(',',filename_parts)
-        bipsmean = [bc.mean() for bc in bipscols]
-        powmean = [pow.mean() for pow in powcols]
-        b2p = ','.join([str((bipsmean[2*i]+bipsmean[2*i+1])**2/(powmean[2*i]+powmean[2*i+1])) for i in range(4)])
-        print(f"{csvparts},{totalb2p.mean()},{b2p},{geomb2p.mean()}")
+            # Check if 'BIPS' column exists
+            b2p = totalbips*totalbips/totalpower
+            filename_parts = csv_file[:-4].split('_')
+            csvparts = str.join(',',filename_parts)
+            bipsmean = [bc.mean() for bc in bipscols]
+            powmean = [pow.mean() for pow in powcols]
+            b2p = ','.join([str((bipsmean[2*i]+bipsmean[2*i+1])**2/(powmean[2*i]+powmean[2*i+1])) for i in range(4)])
+            print(f"{csvparts},{totalb2p.mean()},{b2p},{geomb2p.mean()}")
+        except:
+            print("Exception at {}".format(csv_file))
                 
 
 

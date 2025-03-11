@@ -339,10 +339,13 @@ public class LocalController{
                 }
 
             } else if (policy.equals("ml2")){
-                //ml2 is now moving grad
                 double sum_newpl = 0;
                 double grad_sum=0;
-                
+                double b2p0 = 1.0 + curperf[0]*curperf[0]/cpupower[0];
+                double b2p1 = 1.0 + curperf[1]*curperf[1]/cpupower[1];
+                double geomb2p = Math.sqrt(b2p0*b2p1);
+                edp_gradients[0] = (float)(edp_gradients[0]*geomb2p/b2p0);
+                edp_gradients[1] = (float)(edp_gradients[1]*geomb2p/b2p1);
                 for (int i = 0; i<newpl.length; i++){
                     grad_sum += edp_gradients[i];            
                 }
