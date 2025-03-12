@@ -56,7 +56,7 @@ public class LocalController{
     public static final float grad_max = 5.0f;
     public static final double power_min = 18;
     public static final double power_max = 105;
-    public static final float freq_min= 10e5f;
+    public static final float freq_min= 12e5f;
     public static String arrToStr(float[] arr){
         return Arrays.toString(arr).replace('[', ' ').replace(']',' ');
     }
@@ -326,13 +326,13 @@ public class LocalController{
                 //corner-case: minimum freq
                 if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 0.5 && 
                     avgfreqs[1] > freq_min  && newpl[1] > power_min){
-                    newpl[0] = curpl[0] + 0.5;
+                    newpl[0] = curpl[0] + 1;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[1] = totalcap - newpl[0];
                     }
                 } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 0.5 &&
                             avgfreqs[0] > freq_min && newpl[0] > power_min){
-                    newpl[1] = curpl[1] + 0.5;
+                    newpl[1] = curpl[1] + 1;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[0] = totalcap - newpl[1];
                     }
