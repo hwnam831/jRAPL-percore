@@ -51,6 +51,7 @@ def print_b2p(folder_path):
         last_line_to_first(csv_file)
         # Read the CSV file
         df = pd.read_csv(csv_file)
+        df = df.iloc[:600]
         bipscols = []
         powcols = []
         try:

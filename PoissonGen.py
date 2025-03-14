@@ -20,4 +20,5 @@ if __name__ == "__main__":
     arr = PoissonGen(rate, interval)
     while len(arr) < int(rate*interval) - 1 or len(arr) > int(rate*interval) + 1:
         arr = PoissonGen(rate, interval)
-    print(arr)
+    arrstr = ",".join([" {:.4f}".format(t) for t in arr])
+    print(arrstr)

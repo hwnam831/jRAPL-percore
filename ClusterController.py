@@ -143,7 +143,7 @@ def printcsv(starttime):
                      str(nodeStatuses[c]['BIPS:0']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:0']),str(b2p_grads)]
         b2p_grads = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower)
         csvlines += [str(nodeStatuses[c]['Limit:1']),str(nodeStatuses[c]['Consumption:1']),
-                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:1']),str(b2p_grads)]
+                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:1']),str(nodeStatuses[c]['Freq:1']),str(b2p_grads)]
     print(','.join(csvlines))
 
 # 20 Tokens total
