@@ -78,7 +78,7 @@ def print_b2p(folder_path):
             bipsmean = [bc.mean() for bc in bipscols]
             powmean = [pow.mean() for pow in powcols]
             b2p = ','.join([str((bipsmean[2*i]+bipsmean[2*i+1])**2/(powmean[2*i]+powmean[2*i+1])) for i in range(4)])
-            print(f"{csvparts},{totalb2p.mean()},{b2p},{geomb2p.mean()}")
+            print(f"{csvparts},{totalpower.mean()},{totalb2p.mean()},{b2p},{geomb2p.mean()}")
         except:
             print("Exception at {}".format(csv_file))
                 

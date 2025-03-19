@@ -21,7 +21,7 @@ def signal_handler(sig, frame):
     global serverRunning
     serverRunning = False
 
-def ControllerServer():
+def ControllerServer(periodms=1000):
 
     global nodeStatuses
     global clients
@@ -74,6 +74,7 @@ def ControllerServer():
             #print(dataStrList)
             #Running average update
             lockStatus.acquire()
+            gamma = (200.0) / periodms
             if initialflag:
                 nodeStatuses[clientAddress]['Consumption:0'] = float(dataStrList[0])
                 nodeStatuses[clientAddress]['BIPS:0'] = float(dataStrList[1])
@@ -88,26 +89,26 @@ def ControllerServer():
                 nodeStatuses[clientAddress]['dBIPS/dPower:1'] = float(dataStrList[9])
             else:
                 nodeStatuses[clientAddress]['Consumption:0'] = \
-                    nodeStatuses[clientAddress]['Consumption:0'] * 0.75 + 0.25 * float(dataStrList[0])
+                    nodeStatuses[clientAddress]['Consumption:0'] * (1 - gamma) + gamma * float(dataStrList[0])
                 nodeStatuses[clientAddress]['BIPS:0'] = \
-                    nodeStatuses[clientAddress]['BIPS:0'] * 0.75 + 0.25 * float(dataStrList[1])
+                    nodeStatuses[clientAddress]['BIPS:0'] * (1 - gamma) + gamma * float(dataStrList[1])
                 nodeStatuses[clientAddress]['Util:0'] = \
-                    nodeStatuses[clientAddress]['Util:0'] * 0.75 + 0.25 * float(dataStrList[2])
+                    nodeStatuses[clientAddress]['Util:0'] * (1 - gamma) + gamma * float(dataStrList[2])
                 nodeStatuses[clientAddress]['Freq:0'] = \
-                    nodeStatuses[clientAddress]['Freq:0'] * 0.75 + 0.25 * float(dataStrList[3])
+                    nodeStatuses[clientAddress]['Freq:0'] * (1 - gamma) + gamma * float(dataStrList[3])
                 nodeStatuses[clientAddress]['dBIPS/dPower:0'] = \
-                    nodeStatuses[clientAddress]['dBIPS/dPower:0'] * 0.75 + 0.25 * float(dataStrList[4])
+                    nodeStatuses[clientAddress]['dBIPS/dPower:0'] * (1 - gamma) + gamma * float(dataStrList[4])
 
                 nodeStatuses[clientAddress]['Consumption:1'] = \
-                    nodeStatuses[clientAddress]['Consumption:1'] * 0.75 + 0.25 * float(dataStrList[5])
+                    nodeStatuses[clientAddress]['Consumption:1'] * (1 - gamma) + gamma * float(dataStrList[5])
                 nodeStatuses[clientAddress]['BIPS:1'] = \
-                    nodeStatuses[clientAddress]['BIPS:1'] * 0.75 + 0.25 * float(dataStrList[6])
+                    nodeStatuses[clientAddress]['BIPS:1'] * (1 - gamma) + gamma * float(dataStrList[6])
                 nodeStatuses[clientAddress]['Util:1'] = \
-                    nodeStatuses[clientAddress]['Util:1'] * 0.75 + 0.25 * float(dataStrList[7])
+                    nodeStatuses[clientAddress]['Util:1'] * (1 - gamma) + gamma * float(dataStrList[7])
                 nodeStatuses[clientAddress]['Freq:1'] = \
-                    nodeStatuses[clientAddress]['Freq:1'] * 0.75 + 0.25 * float(dataStrList[8])
+                    nodeStatuses[clientAddress]['Freq:1'] * (1 - gamma) + gamma * float(dataStrList[8])
                 nodeStatuses[clientAddress]['dBIPS/dPower:1'] = \
-                    nodeStatuses[clientAddress]['dBIPS/dPower:1'] * 0.75 + 0.25 * float(dataStrList[9])
+                    nodeStatuses[clientAddress]['dBIPS/dPower:1'] * (1 - gamma) + gamma * float(dataStrList[9])
             lockStatus.release()
             
             
@@ -125,8 +126,8 @@ power_max = 105
 power_min = 20
 grad_max = 5.0
 alpha = 0.2
-default_lr = 2.0
-min_freq = 1.0
+default_lr = 4.0
+min_freq = 1.2
 
 def printcsv(starttime):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -173,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='1000',help="time period in milliseconds")
+                default='2000',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
