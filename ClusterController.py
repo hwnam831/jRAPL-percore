@@ -6,6 +6,7 @@ import argparse
 import signal
 import sys
 import copy
+import random
 
 
 myPort = 4545
@@ -15,6 +16,11 @@ clients = []
 powerTargets = {}
 nodeStatuses = {}
 clusterPowerLimit = 120.0
+inc_threshold = 0.9
+dec_threshold = 0.8
+inc_percentile = 1.1
+dec_percentile = 0.9
+peak_threshold = 0.5
 
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!', file=sys.stderr)
@@ -169,7 +175,8 @@ def requiredTokens(util, prevutil, bips, prevbips, token, prevtoken):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--policy", type=str, choices=['slurm','ml','sin','fair','tokensmart','hierarchical','geoml'],
+    parser.add_argument("-p", "--policy", type=str,
+                        choices=['slurm','ml','dps','fair','tokensmart','hierarchical','geoml'],
                 default='fair',help="policy")
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
@@ -199,6 +206,8 @@ if __name__ == '__main__':
     prevutils = {}
 
     prevbips = {}
+    prevpower = {}
+    peakratio = {}
     tokenpool = 0
     starvationThreshold = 32
 
@@ -232,6 +241,8 @@ if __name__ == '__main__':
                 prevtokens[c] = [12,12]
                 prevutils[c] = [nodeStatuses[c]['Util:0'],nodeStatuses[c]['Util:1']]
                 prevbips[c] = [nodeStatuses[c]['BIPS:0'],nodeStatuses[c]['BIPS:1']]
+                prevpower[c] = [nodeStatuses[c]['Consumption:0'],nodeStatuses[c]['Consumption:0']]
+                peakratio[c] = [peak_threshold,peak_threshold]
             
         for c in clients:
             b2p0 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower))
@@ -453,7 +464,98 @@ if __name__ == '__main__':
                 nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] + pool/len(clients)/2
         elif args.policy == 'fair':
             for c in clients:
-                nodeStatuses[c]['Limit'] = clusterPowerLimit/len(clients)
+                nodeStatuses[c]['Limit:0'] = clusterPowerLimit/len(clients)/2
+                nodeStatuses[c]['Limit:1'] = clusterPowerLimit/len(clients)/2
+        elif args.policy == 'dps':
+            # Restore unit
+            initial_cap = clusterPowerLimit/len(clients)/2
+            restore_flag = True
+            for c in clients:
+                if (nodeStatuses[c]['Consumption:0'] > initial_cap * inc_threshold or \
+                    nodeStatuses[c]['Consumption:1'] > initial_cap * inc_threshold):
+                    restore_flag = False
+                    break
+
+            # Stateless unit
+
+            totalcap = 0
+            for c in clients:
+                if (nodeStatuses[c]['Consumption:0'] < nodeStatuses[c]['Limit:0'] * dec_threshold):
+                    nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] * dec_percentile
+                if (nodeStatuses[c]['Consumption:1'] < nodeStatuses[c]['Limit:1'] * dec_threshold):
+                    nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] * dec_percentile
+                totalcap += nodeStatuses[c]['Limit:0'] + nodeStatuses[c]['Limit:1']
+            avail_budget = clusterPowerLimit - totalcap
+            idxlist = list(range(len(clients)))
+            random.shuffle(idxlist)
+            for idx in idxlist:
+                c = clients[idx]
+                if (nodeStatuses[c]['Consumption:0'] > nodeStatuses[c]['Limit:0'] * inc_threshold):
+                    tempt = min(avail_budget, nodeStatuses[c]['Limit:0'] * (inc_percentile - 1.0))
+                    nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] + tempt
+                    avail_budget -= tempt
+                if (nodeStatuses[c]['Consumption:1'] > nodeStatuses[c]['Limit:1'] * inc_threshold):
+                    tempt = min(avail_budget, nodeStatuses[c]['Limit:1'] * (inc_percentile - 1.0))
+                    nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] + tempt
+                    avail_budget -= tempt
+            # Priority module
+            priority_flags = {c:[False,False] for c in clients}
+            for c in clients:
+                peakratio[c][0] = peakratio[c][0] * 0.9
+                if (nodeStatuses[c]['Consumption:0'] > initial_cap * inc_threshold):
+                     peakratio[c][0] += 0.1
+                peakratio[c][1] = peakratio[c][1] * 0.9
+                if (nodeStatuses[c]['Consumption:1'] > initial_cap * inc_threshold):
+                     peakratio[c][1] += 0.1
+
+                if peakratio[c][0] > peak_threshold:
+                    priority_flags[c][0] = True
+                if peakratio[c][1] > peak_threshold:    
+                    priority_flags[c][1] = True
+                direv = nodeStatuses[c]['Consumption:0'] - prevpower[c][0]
+                if direv > prevpower[c][0] * (inc_percentile - 1.0):
+                    priority_flags[c][0] = True
+                direv = nodeStatuses[c]['Consumption:1'] - prevpower[c][1]
+                if direv > prevpower[c][1] * (inc_percentile - 1.0):
+                    priority_flags[c][1] = True
+            
+            # Readjusting module
+            budget_high = 0.0
+            count_high = 0
+            for c in clients:
+                if priority_flags[c][0]:
+                    budget_high += nodeStatuses[c]['Limit:0']
+                    count_high += 1
+                if priority_flags[c][1]:
+                    budget_high += nodeStatuses[c]['Limit:1']
+                    count_high += 1
+            if avail_budget > 0:
+                total = 0.0
+                for c in clients:
+                    if priority_flags[c][0]:
+                        total += budget_high/nodeStatuses[c]['Limit:0']
+                    if priority_flags[c][1]:
+                        total += budget_high/nodeStatuses[c]['Limit:1']
+                for c in clients:
+                    if priority_flags[c][0]:
+                        nodeStatuses[c]['Limit:0'] += avail_budget * budget_high/nodeStatuses[c]['Limit:0']/total
+                        nodeStatuses[c]['Limit:0'] = min(nodeStatuses[c]['Limit:0'], power_max)
+                    if priority_flags[c][1]:
+                        nodeStatuses[c]['Limit:1'] += avail_budget * budget_high/nodeStatuses[c]['Limit:1']/total
+                        nodeStatuses[c]['Limit:1'] = min(nodeStatuses[c]['Limit:1'], power_max)
+            else:
+                readjusted_cap = budget_high/count_high
+                for c in clients:
+                    if priority_flags[c][0]:
+                        nodeStatuses[c]['Limit:0'] = readjusted_cap
+                    if priority_flags[c][1]:
+                        nodeStatuses[c]['Limit:1'] = readjusted_cap
+            
+            if restore_flag:
+                for c in clients:
+                    nodeStatuses[c]['Limit:0'] = initial_cap
+                    nodeStatuses[c]['Limit:1'] = initial_cap
+            
         elif args.policy == 'tokensmart':
             for c in clients:
                 for soc in range(2):
