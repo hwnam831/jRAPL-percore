@@ -145,12 +145,14 @@ def printcsv(starttime):
         totalpower += nodeStatuses[c]['Consumption:0']
         totalpower += nodeStatuses[c]['Consumption:1']
     for c in clients:
-        b2p_grads = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower)
+        #b2p_grad = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower)
+        b2p_grad = nodeStatuses[c]['dBIPS/dPower:0']
         csvlines += [str(nodeStatuses[c]['Limit:0']),str(nodeStatuses[c]['Consumption:0']),
-                     str(nodeStatuses[c]['BIPS:0']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:0']),str(b2p_grads)]
-        b2p_grads = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower)
+                     str(nodeStatuses[c]['BIPS:0']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:0']),str(b2p_grad)]
+        #b2p_grad = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower)
+        b2p_grad = nodeStatuses[c]['dBIPS/dPower:1']
         csvlines += [str(nodeStatuses[c]['Limit:1']),str(nodeStatuses[c]['Consumption:1']),
-                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:1']),str(nodeStatuses[c]['Freq:1']),str(b2p_grads)]
+                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:1']),str(nodeStatuses[c]['Freq:1']),str(b2p_grad)]
     print(','.join(csvlines))
 
 # 20 Tokens total
@@ -245,9 +247,10 @@ if __name__ == '__main__':
                 peakratio[c] = [peak_threshold,peak_threshold]
             
         for c in clients:
-            b2p0 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower))
-            b2p1 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower))
-            b2p_grads[c] = (b2p0,b2p1)
+            b2p_grads[c] = [nodeStatuses[c]['dBIPS/dPower:0'],nodeStatuses[c]['dBIPS/dPower:1']]
+            #b2p0 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower))
+            #b2p1 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower))
+            #b2p_grads[c] = (b2p0,b2p1)
 
         if args.policy == "hierarchical":
             sum_newpl = 0
@@ -333,11 +336,13 @@ if __name__ == '__main__':
                         eff_len = eff_len -1
                         newpl = nodeStatuses[c]['Limit:0'] + 1
                         coefs[c][0] = 0
+                        '''
                     elif newpl < power_min:
                         remainder += power_min - newpl
                         eff_len = eff_len -1
                         newpl = power_min
                         coefs[c][0] = 0
+                        '''
                     else:
                         coefs[c][0] = 1
                     nodeStatuses[c]['Limit:0'] = newpl

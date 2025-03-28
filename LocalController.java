@@ -82,7 +82,7 @@ public class LocalController{
         parser.addArgument("--graceperiod").type(Integer.class)
                 .setDefault(5).help("Do not control until certain seconds");
         parser.addArgument("--alpha").type(Double.class)
-                .setDefault(0.25).help("Adjustment rate to make PL and power closer");
+                .setDefault(0.2).help("Adjustment rate to make PL and power closer");
         parser.addArgument("--tag").type(String.class)
                 .setDefault("").help("CSV filename tag");
         parser.addArgument("--parent").type(String.class)
@@ -297,9 +297,11 @@ public class LocalController{
                 }
                 double remainder = 0;
                 int eff_len = newpl.length;
-                double[] coefs = new double[newpl.length];
+                //
                 if (sum_newpl > totalcap + tolerance){
                     double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
+                    /*
+                    double[] coefs = new double[newpl.length];
                     for (int i = 0; i<newpl.length; i++){
                         newpl[i] -= delta;
                         if (newpl[i] < power_min){
@@ -317,21 +319,26 @@ public class LocalController{
                         }
                         newpl[i] -= coefs[i]*remainder/eff_len;
                     }
+                    */
+                    for (int i = 0; i<newpl.length; i++){
+                        newpl[i] -= delta;
+                    }
+                    
                 } else {
                     double delta = (totalcap - sum_newpl)/newpl.length;
                     for (int i = 0; i<newpl.length; i++){
-                        newpl[i] += delta/2;
+                        newpl[i] += delta;
                     }
                 }
                 //corner-case: minimum freq
-                if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 0.5 && 
-                    avgfreqs[1] > freq_min  && newpl[1] > power_min){
+                if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 1 && 
+                    avgfreqs[1] > freq_min){
                     newpl[0] = curpl[0] + 1;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[1] = totalcap - newpl[0];
                     }
-                } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 0.5 &&
-                            avgfreqs[0] > freq_min && newpl[0] > power_min){
+                } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 1 &&
+                            avgfreqs[0] > freq_min){
                     newpl[1] = curpl[1] + 1;
                     if (newpl[0] + newpl[1] > totalcap){
                         newpl[0] = totalcap - newpl[1];
