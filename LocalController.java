@@ -106,7 +106,7 @@ public class LocalController{
         boolean centralized = policy.equals("central");
         PowerControllerThread powerController = new PowerControllerThread((Integer)res.get("cap"),timeperiodms, (String)res.get("parent"), centralized);
         double[] curpl = powerController.curpl.limits.clone();
-        float[] powerusage = new float[curpl.length];
+        //float[] powerusage = new float[curpl.length];
         float[] drampower = new float[curpl.length];
         float[] cpupower = new float[curpl.length];
         double tolerance = 0.0;
@@ -168,10 +168,10 @@ public class LocalController{
             String l = "";
             PerfCounters fctr = traceCollector.perfCounters.peekFirst();
             
-            for (int i = 0; i<powerusage.length; i++){
+            for (int i = 0; i<cpupower.length; i++){
                 drampower[i] = traceCollector.moving_dram[i];
                 cpupower[i] = traceCollector.moving_power[i];
-                powerusage[i] = cpupower[i] + drampower[i];
+                //powerusage[i] = cpupower[i] + drampower[i];
                 total_curpower += cpupower[i];
                 total_drampower += drampower[i];
                 AvgPOW[i] = AvgPOW[i]*0.9f + cpupower[i]*0.1f;
@@ -201,7 +201,7 @@ public class LocalController{
                 total_bips += curperf[i];
 
             }
-            mymodel.compile(traceCollector.moving_input);
+            mymodel.compile(traceCollector.moving_input, cpupower);
             float[][] freqs = new float[num_pkg][core_per_pkg];
             float[] avgfreqs = new float[num_pkg];
             for (int pkg=0; pkg<traceCollector.num_sockets; pkg++){
@@ -215,10 +215,10 @@ public class LocalController{
             traceCollector.lock.unlock();
             
             
-            float[] edp_gradients = mymodel.getGlobalB2PGradients((float)total_curpower, (float)total_bips);
-            //float[] edp_gradients = mymodel.getB2PGradients(powerusage, curperf);
+            //float[] edp_gradients = mymodel.getGlobalB2PGradients((float)total_curpower, (float)total_bips);
+            float[] edp_gradients = mymodel.getPerfGradients(cpupower, curperf);
             if (policy.equals("localml")){
-                edp_gradients = mymodel.getB2PGradients(powerusage, curperf);
+                edp_gradients = mymodel.getB2PGradients(cpupower, curperf);
             } else if (policy.equals("ml2")){
                 for (int i = 0; i<edp_gradients.length; i++){
                     moving_grads[i] = (float)((1-alpha)*moving_grads[i] + alpha*edp_gradients[i]);

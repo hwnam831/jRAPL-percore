@@ -63,6 +63,7 @@ public class PPEPModel {
     public float[] predicted_power;
     public float[] predicted_idle;
     public float[] dBIPSdP; // store it per core
+    float[] power_adjust;
     //float[][] active_coef_compiled; // compiled per core
     //float[][] mcpi;
     //float[][] ccpi;
@@ -107,12 +108,16 @@ public class PPEPModel {
         this.predicted_power = new float[num_pkg];
         this.predicted_idle = new float[num_pkg];
         this.dBIPSdP = new float[num_pkg];
+        this.power_adjust = new float[num_pkg];
+        for (int p=0; p<this.num_pkg; p++){
+            this.power_adjust[p] = 1.0f;
+        }
         
     }
 
     // raw_counters[core_per_socket*n_sockets][5+n_counters]
     // voltage,freq,temp,inst,cycle, ldm-stalls,cache-misses,branch-misses,uops
-    public void compile(float[][] coreCtrs){
+    public void compile(float[][] coreCtrs, float[] measured_power){
         for (int p=0; p<this.num_pkg; p++){
             float pkg_idle_power = 0.0f;
             float pkg_dyn_power = 0.0f;
@@ -163,8 +168,12 @@ public class PPEPModel {
                   
                 
             }
-            this.predicted_power[p] = pkg_dyn_power + pkg_idle_power;
-            this.predicted_idle[p] = pkg_idle_power;
+            this.predicted_power[p] = (pkg_dyn_power + pkg_idle_power)* this.power_adjust[p];
+            this.predicted_idle[p] = pkg_idle_power* this.power_adjust[p];
+            //float measured_dyn = measured_power[p] - pkg_idle_power;
+
+            this.power_adjust[p] = (measured_power[p]/(pkg_dyn_power+pkg_idle_power)
+                                     + 3*this.power_adjust[p])/4;
         }
     }
 
@@ -172,7 +181,19 @@ public class PPEPModel {
         float[] grads = new float[this.num_pkg];
         for (int p=0; p<this.num_pkg; p++){
             float bpp = bips[p]/power[p];
-            grads[p] = 2*bpp * this.dBIPSdP[p] - bpp*bpp;
+            grads[p] = 2*bpp * this.dBIPSdP[p]/this.power_adjust[p] - bpp*bpp;
+            //grads[p] = this.dBIPSdP[p]/this.power_adjust[p];
+        }
+        return grads;
+        
+    }
+
+    public float[] getPerfGradients(float[] power, float[] bips){
+        float[] grads = new float[this.num_pkg];
+        for (int p=0; p<this.num_pkg; p++){
+            float bpp = bips[p]/power[p];
+            //grads[p] = this.dBIPSdP[p]/this.power_adjust[p] - bpp;
+            grads[p] = this.dBIPSdP[p]/this.power_adjust[p];
         }
         return grads;
         
@@ -182,7 +203,7 @@ public class PPEPModel {
         float[] grads = new float[this.num_pkg];
         for (int p=0; p<this.num_pkg; p++){
             float bpp = totalbips/totalpower;
-            grads[p] = 2*bpp * this.dBIPSdP[p] - bpp*bpp;
+            grads[p] = 2*bpp * this.dBIPSdP[p]/this.power_adjust[p] - bpp*bpp;
         }
         return grads;
     }
@@ -207,7 +228,7 @@ public class PPEPModel {
             //ctrs[core] = PPEPModel.readFile("testinput.txt", 9);
         }
 
-        mymodel.compile(ctrs);
+        mymodel.compile(ctrs, new float[]{20f, 20f});
         //System.out.println("Predicted power: " + mymodel.predicted_power[0] + "," + mymodel.predicted_power[1]
         //     + "; Gradient: " + mymodel.dBIPSdP[0] + "," + mymodel.dBIPSdP[1]);
 
@@ -227,7 +248,7 @@ public class PPEPModel {
                         System.err.println("Warning: Skipping invalid number: " + values[i]);
                     }
                 }
-                mymodel.compile(ctrs);
+                mymodel.compile(ctrs, new float[]{20f, 20f});
                 float[] bips = new float[2];
                 bips[0] = ctrs[0][3]*10;
                 bips[1] = ctrs[10][3]*10;
