@@ -82,7 +82,7 @@ public class LocalController{
         parser.addArgument("--graceperiod").type(Integer.class)
                 .setDefault(5).help("Do not control until certain seconds");
         parser.addArgument("--alpha").type(Double.class)
-                .setDefault(0.2).help("Adjustment rate to make PL and power closer");
+                .setDefault(0.25).help("Adjustment rate to make PL and power closer");
         parser.addArgument("--tag").type(String.class)
                 .setDefault("").help("CSV filename tag");
         parser.addArgument("--parent").type(String.class)
@@ -288,11 +288,13 @@ public class LocalController{
                 for (int i = 0; i<newpl.length; i++){
                     
                     newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
+                    /*
                     if (newpl[i] > power_max){
                         newpl[i] = power_max;
                     } else if (newpl[i] < power_min){
                         newpl[i] = power_min;
                     }
+                    */
                     sum_newpl += newpl[i];              
                 }
                 double remainder = 0;
