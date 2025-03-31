@@ -132,7 +132,7 @@ power_max = 105
 power_min = 20
 grad_max = 5.0
 alpha = 0.2
-default_lr = 4.0
+default_lr = 5.0
 min_freq = 1.2
 
 def printcsv(starttime):
