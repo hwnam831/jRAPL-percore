@@ -8,5 +8,5 @@ mkdir -p results;
 ssh hwnam831@ow2 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" llama-3.1-8b llama-3.1-8b config"$4"sec_"$1"_central" &
 ssh hwnam831@ow3 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" stable-diffusion stable-diffusion config"$4"sec_"$1"_central" &
 ssh hwnam831@ow4 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" cnn-serving cnn-serving config"$4"sec_"$1"_central" &
-ssh hwnam831@ow5 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" vits-ljs vits-ljsconfig"$4"sec_"$1"_central" &
+ssh hwnam831@ow5 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" vits-ljs vits-ljs config"$4"sec_"$1"_central" &
 python3 ClusterController.py --policy $1 --limit $TOTALCAP --duration $DURATION --periodms $(($4*1000)) > results/config"$4"sec_centralized_$1_$2.csv;
