@@ -51,24 +51,27 @@ def print_b2p(folder_path):
         last_line_to_first(csv_file)
         # Read the CSV file
         df = pd.read_csv(csv_file)
-        df = df.iloc[:600]
+        #df = df.iloc[:600]
         bipscols = []
         powcols = []
         try:
-            for node in (1,2,3,4):
+            for node in range(1,16):
+                if not f"BIPS:{node}:0" in df.columns:
+                    break
                 for soc in (0,1):
                     bipscols.append(df[f"BIPS:{node}:{soc}"])
                     powcols.append(df[f"Consumption:{node}:{soc}"])
 
-            totalbips = bipscols[0] + bipscols[1] + bipscols[2] + bipscols[3] + \
-                        bipscols[4] + bipscols[5] + bipscols[6] + bipscols[7]
-            totalpower = powcols[0] + powcols[1] + powcols[2] + powcols[3] + \
-                        powcols[4] + powcols[5] + powcols[6] + powcols[7]
-            geombips = bipscols[0] * bipscols[1] * bipscols[2] * bipscols[3] * \
-                        bipscols[4] * bipscols[5] * bipscols[6] * bipscols[7]
-            geompow = powcols[0] * powcols[1] * powcols[2] * powcols[3] * \
-                            powcols[4] * powcols[5] * powcols[6] * powcols[7]
-            geomb2p = (geombips ** (1/4)) / (geompow ** (1/8))
+            totalbips = bipscols[0]
+            totalpower = powcols[0]
+            geombips = bipscols[0] ** (1/len(bipscols))
+            geompow = powcols[0] ** (1/len(bipscols))
+            for i in range(1, len(bipscols)):
+                totalbips += bipscols[i]
+                totalpower += powcols[i]
+                geombips *= bipscols[i] ** (1/len(bipscols))
+                geompow *= powcols[i] ** (1/len(bipscols))
+            geomb2p = (geombips ** 2) / (geompow)
             totalb2p = totalbips**2 / totalpower
 
             # Check if 'BIPS' column exists

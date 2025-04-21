@@ -1,0 +1,17 @@
+mkdir -p bigcluster
+scp hwnam831@ow2:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow3:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow4:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow5:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow6:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow7:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow8:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow9:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow10:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow11:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+#scp hwnam831@ow12:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow13:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow14:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow15:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow16:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+scp hwnam831@ow17:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/

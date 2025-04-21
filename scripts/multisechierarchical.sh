@@ -1,6 +1,7 @@
-#Usage: clusterexp.sh [policy] [limit] [duration]
+#Usage: clusterexp.sh [policy] [limit] [duration] [sec]
 TOTALCAP=$(($2*15))
 DURATION=$(($3+120))
+PERIOD=$(($4*1000))
 #cd /mydata/workspace/faas-profiler;
 #./WorkloadInvoker -c warmup.json & sleep 70;
 cd /mydata/workspace/jrapl;
@@ -25,4 +26,4 @@ ssh hwnam831@ow14 "cd /mydata/workspace/jrapl; bash run_hierarchical.sh "$DURATI
 ssh hwnam831@ow15 "cd /mydata/workspace/jrapl; bash run_hierarchical.sh "$DURATION" "$2" vits-ljs vits-ljs bigcluster"$4"sec2_"$1"_hierarchical med low 2" 2> /dev/null &
 ssh hwnam831@ow16 "cd /mydata/workspace/jrapl; bash run_hierarchical.sh "$DURATION" "$2" vits-ljs vits-ljs bigcluster"$4"sec3_"$1"_hierarchical high low 3" 2> /dev/null &
 ssh hwnam831@ow17 "cd /mydata/workspace/jrapl; bash run_hierarchical.sh "$DURATION" "$2" vits-ljs vits-ljs bigcluster"$4"sec4_"$1"_hierarchical high low 4" 2> /dev/null &
-python3 ClusterController.py --policy $1 --limit $TOTALCAP --duration $DURATION --periodms 8000 > results/bigcluster"$4"sec_hierarchical_$1_$2.csv;
+python3 ClusterController.py --policy $1 --limit $TOTALCAP --duration $DURATION --periodms $PERIOD > results/bigcluster"$4"sec_hierarchical_$1_$2.csv;

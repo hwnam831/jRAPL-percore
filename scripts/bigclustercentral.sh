@@ -25,4 +25,4 @@ ssh hwnam831@ow14 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATIO
 ssh hwnam831@ow15 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" vits-ljs vits-ljs bigcluster2_"$1"_central med low 2" 2> /dev/null &
 ssh hwnam831@ow16 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" vits-ljs vits-ljs bigcluster3_"$1"_central high low 3" 2> /dev/null &
 ssh hwnam831@ow17 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$DURATION" "$2" vits-ljs vits-ljs bigcluster4_"$1"_central high low 4" 2> /dev/null &
-python3 ClusterController.py --policy $1 --limit $TOTALCAP --duration $DURATION > results/bigcluster_centralized_$1_$2.csv;
+python3 ClusterController.py --policy $1 --limit $TOTALCAP --duration $DURATION --periodms 8000 > results/bigcluster_centralized_$1_$2.csv;

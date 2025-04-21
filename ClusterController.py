@@ -223,7 +223,7 @@ if __name__ == '__main__':
         if len(clients) < 2:
             continue
         if (time.time() - starttime) < args.graceperiod:
-            clients.sort()
+            clients.sort(key=lambda x: int(x.split('.')[-1]))
             for c in clients:
                 nodeStatuses[c]['Limit:0'] = clusterPowerLimit/len(clients)/2
                 nodeStatuses[c]['Limit:1'] = clusterPowerLimit/len(clients)/2
@@ -243,11 +243,18 @@ if __name__ == '__main__':
                 prevtokens[c] = [12,12]
                 prevutils[c] = [nodeStatuses[c]['Util:0'],nodeStatuses[c]['Util:1']]
                 prevbips[c] = [nodeStatuses[c]['BIPS:0'],nodeStatuses[c]['BIPS:1']]
-                prevpower[c] = [nodeStatuses[c]['Consumption:0'],nodeStatuses[c]['Consumption:0']]
+                prevpower[c] = [nodeStatuses[c]['Consumption:0'],nodeStatuses[c]['Consumption:1']]
                 peakratio[c] = [peak_threshold,peak_threshold]
             
         for c in clients:
             b2p_grads[c] = [nodeStatuses[c]['dBIPS/dPower:0'],nodeStatuses[c]['dBIPS/dPower:1']]
+            peakratio[c][0] = peakratio[c][0] * 0.9
+            initial_cap = clusterPowerLimit/len(clients)/2
+            if (nodeStatuses[c]['Consumption:0'] > initial_cap * inc_threshold):
+                    peakratio[c][0] += 0.1
+            peakratio[c][1] = peakratio[c][1] * 0.9
+            if (nodeStatuses[c]['Consumption:1'] > initial_cap * inc_threshold):
+                    peakratio[c][1] += 0.1
             #b2p0 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower))
             #b2p1 = (2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower))
             #b2p_grads[c] = (b2p0,b2p1)
@@ -506,21 +513,16 @@ if __name__ == '__main__':
             # Priority module
             priority_flags = {c:[False,False] for c in clients}
             for c in clients:
-                peakratio[c][0] = peakratio[c][0] * 0.9
-                if (nodeStatuses[c]['Consumption:0'] > initial_cap * inc_threshold):
-                     peakratio[c][0] += 0.1
-                peakratio[c][1] = peakratio[c][1] * 0.9
-                if (nodeStatuses[c]['Consumption:1'] > initial_cap * inc_threshold):
-                     peakratio[c][1] += 0.1
-
                 if peakratio[c][0] > peak_threshold:
                     priority_flags[c][0] = True
                 if peakratio[c][1] > peak_threshold:    
                     priority_flags[c][1] = True
                 direv = nodeStatuses[c]['Consumption:0'] - prevpower[c][0]
+                prevpower[c][0] = nodeStatuses[c]['Consumption:0']
                 if direv > prevpower[c][0] * (inc_percentile - 1.0):
                     priority_flags[c][0] = True
                 direv = nodeStatuses[c]['Consumption:1'] - prevpower[c][1]
+                prevpower[c][1] = nodeStatuses[c]['Consumption:1']
                 if direv > prevpower[c][1] * (inc_percentile - 1.0):
                     priority_flags[c][1] = True
             
