@@ -141,7 +141,7 @@ public class TraceCollector{
         
 
         //String counters = "cache-misses,instructions,cycle_activity.cycles_mem_any,branch-misses,uops_executed.core";
-        String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
+        String counters = "cycle_activity.stalls_l3_miss,cache-misses,cycle_activity.stalls_total,branch-misses,exe.amx_busy,uops_executed.core,fp_arith_inst_retired.vector";
         String[] ctrs = counters.split(",");
 		String firstLine = "Time(ms),Duration(ms)";
         

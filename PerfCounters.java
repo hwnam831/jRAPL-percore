@@ -11,6 +11,7 @@ class PerfCounters{
     public static final int tempRange = 90;
     public static final float perNsMax = 100;
     public float[][] coreCtrs;
+    public int nctrs;
     public static boolean validate(boolean valid, float min, float max, float val){
         return valid && val > min-0.01 && val < max;
     }
@@ -20,7 +21,8 @@ class PerfCounters{
         pkgCtrs = new float[after.length][2];
         //voltage,freq,temp,inst,cycle and counters
         int cps = after[0].core_count;
-        coreCtrs = new float[cps * after.length][5+after[0].names.length];
+        nctrs = 5+after[0].names.length;
+        coreCtrs = new float[cps * after.length][nctrs];
         timems = after[0].time;
         for (int socket = 0; socket < after.length; socket++){
             long duration = after[socket].time - before[socket].time;
@@ -42,7 +44,7 @@ class PerfCounters{
                 coreCtrs[core+socket*cps][3] = bips;
 
                 float bcps = (float)(after[socket].cycles[core] - before[socket].cycles[core])/duration_ns;
-                valid = validate(valid, 0, 4, bcps);
+                valid = validate(valid, 0, 10, bcps);
                 coreCtrs[core+socket*cps][4] = bcps;
 
                 for (int i=0; i<after[0].names.length; i++){
@@ -114,7 +116,8 @@ class TraceCollectorThread extends Thread{
         }
         perfCounters = new ArrayDeque<PerfCounters>();
         this.tracecount = 0;
-        moving_input = new float[threadNum][9];
+        int nctrs = PerfCheckUtils.eventNum + 5;
+        moving_input = new float[threadNum][nctrs];
         moving_power = new float[num_sockets];
         moving_dram = new float[num_sockets];
         for (int i=0; i<moving_power.length; i++){
@@ -122,7 +125,7 @@ class TraceCollectorThread extends Thread{
             moving_dram[i] = 0;
         }
         for (int i=0; i<moving_input.length; i++){
-            for (int c=0; c<9; c++){
+            for (int c=0; c<nctrs; c++){
                 moving_input[i][c] = 0;
             }
             
@@ -143,7 +146,7 @@ class TraceCollectorThread extends Thread{
         }
         int cps = threadNum/num_sockets;
         for (int pkg=0; pkg<num_sockets; pkg++){
-            int offset = pkg*cps*9;
+            int offset = pkg*cps*pctr.nctrs;
             
             moving_power[pkg] = (1-alpha)*moving_power[pkg] +
                 alpha*pctr.pkgCtrs[pkg][1];
@@ -163,7 +166,7 @@ class TraceCollectorThread extends Thread{
         try {
 
             fwriter = new PrintWriter(new FileOutputStream(csvfile));
-            String counters = "cycle_activity.stalls_ldm_pending,cache-misses,branch-misses,uops_executed.core";
+            String counters = "cycle_activity.stalls_l3_miss,cache-misses,cycle_activity.stalls_total,branch-misses,exe.amx_busy,uops_executed.core,fp_arith_inst_retired.vector";
             String[] ctrs = counters.split(",");
 		    String firstLine = "Time(ms),Duration(ms)";
             for (int i=0; i<num_sockets; i++){

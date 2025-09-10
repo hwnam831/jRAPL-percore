@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.Scanner;
 
 public class EnergyCheckUtils {
@@ -36,7 +35,8 @@ public class EnergyCheckUtils {
 	public static int GetMaxFreq(int coreid){
 		int freq = -1;
 		try {
-			Scanner fscnr = new Scanner(new File("/sys/devices/system/cpu/cpu"+coreid+"/cpufreq/scaling_max_freq"));
+			// the base frequency is not separate from max frequency
+			Scanner fscnr = new Scanner(new File("/sys/devices/system/cpu/cpu"+coreid+"/cpufreq/base_frequency"));
 			freq = fscnr.nextInt();
 		} catch(Exception e){
 			e.printStackTrace();

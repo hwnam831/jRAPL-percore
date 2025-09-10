@@ -14,7 +14,7 @@ class CSVRecord {
 
     double[] records;
     public CSVRecord(String[] headers, int pkgcount){
-        this.headers = new String[2*headers.length + 1];
+        this.headers = new String[pkgcount*headers.length + 1];
         this.headers[0] = "Time(ms)";
         for (int i=0; i<pkgcount; i++){
             for(int j=0; j<headers.length; j++){

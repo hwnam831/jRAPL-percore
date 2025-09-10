@@ -1,5 +1,7 @@
 #sudo cpupower frequency-set --governor userspace --min $1MHz --max $1MHz
-for i in {0..19}
+echo passive | sudo tee /sys/devices/system/cpu/intel_pstate/status
+NCPUS=$(nproc)
+for i in $(seq 0 $((NCPUS-1)))
 do
     sudo cpufreq-set -c $i -g $1
 done
