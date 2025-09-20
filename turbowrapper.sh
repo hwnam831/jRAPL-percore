@@ -1,1 +1,0 @@
-./expscript.sh ocr-img turbo; ./expscript.sh matmul turbo; ./expscript.sh linpack turbo; ./expscript.sh primes turbo; ./expscript.sh ml_training turbo; ./expscript.sh video_processing turbo; ./expscript.sh cnn_serving turbo; ./expscript.sh lr_serving turbo; ./expscript.sh img-resize turbo;./expscript.sh myconfig turbo; 

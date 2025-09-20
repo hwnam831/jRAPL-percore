@@ -11,7 +11,10 @@ CXX_DEFINES = -DUSE_C10D_GLOO -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE
 CXX_INCLUDES = -isystem $(TORCHDIR)/include -isystem $(TORCHDIR)/include/torch/csrc/api/include
 CXX_FLAGS = -D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++17
 
-all: install microbench classes
+all: install microbench classes disable_smt
+
+disable_smt:
+	echo off | sudo tee /sys/devices/system/cpu/smt/control
 
 classes: EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class PerfCounters.class PPEPModel.class LocalController.class
 

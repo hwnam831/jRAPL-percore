@@ -1,0 +1,1 @@
+docker run -v $PWD:/workspace --name torchbench -it hwnam831/torchbench
