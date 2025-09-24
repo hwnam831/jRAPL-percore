@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import pandas as pd
+NUMCORE=28
 
 def file_to_poly(fname):
     coefs = []
@@ -10,19 +11,15 @@ def file_to_poly(fname):
 
 def filter_active(df):
     df['avgutil:0'] = pd.Series(0.0, index=df.index)
-    df['avgutil:1'] = pd.Series(0.0, index=df.index)
-    for core in range(10):
+    for core in range(NUMCORE):
         df['avgutil:0'] += df['cycle-count:'+str(core)] / (df['Freq(kHz):'+str(core)])
-    for core in range(10):
-        df['avgutil:1'] += df['cycle-count:'+str(core+10)] / (df['Freq(kHz):'+str(core+10)])
-    df['avgutil:0'] = df['avgutil:0']/(10 * df['Duration(ms)'])
-    df['avgutil:1'] = df['avgutil:1']/(10 * df['Duration(ms)'])
+    df['avgutil:0'] = df['avgutil:0']/(NUMCORE * df['Duration(ms)'])
     #df['avgutil'].plot()
     mydf =  df[df['avgutil:0'] > 0.05]
-    return mydf[mydf['avgutil:1'] > 0.05]
+    return mydf[mydf['Package Power(W):0'] > 0]
 
 class PPEPRecord():
-    def __init__(self, df, num_pkg=2, num_core=20):
+    def __init__(self, df, num_pkg=1, num_core=28):
         self.num_pkg = num_pkg
         self.core_per_pkg = num_core // num_pkg
         assert num_core%num_pkg == 0
@@ -31,8 +28,9 @@ class PPEPRecord():
         self.durations = df['Duration(ms)'].to_numpy()
         self.pkgcounters = ['DRAM Power(W)', 'Package Power(W)']
         self.counters = ['Voltage', 'Freq(kHz)', 'Temp(C)', 'instructions', 'cycle-count',
-                        'cycle_activity.stalls_ldm_pending', 'uops_executed.core', 'branch-misses', 'cache-misses']
-        self.stats = ['Util', 'MCPI', 'CCPI', 'BIPS', 'uop/inst', 'bmiss/inst', 'cmiss/inst']
+                        'cycle_activity.stalls_l3_miss','cache-misses','cycle_activity.stalls_total','branch-misses','exe.amx_busy',
+                        'uops_executed.core','fp_arith_inst_retired.vector']
+        self.stats = ['Util', 'MCPI', 'CCPI', 'BIPS', 'uop/inst', 'bmiss/inst', 'cmiss/inst', 'fp/inst', 'amx/inst', 'stall/inst']
 
 
         pkg_measures = [{} for _ in range(self.num_pkg)]
@@ -49,7 +47,7 @@ class PPEPRecord():
         for i in range(self.core_per_pkg * self.num_pkg):
             bips = core_measures[i]['instructions'] / self.durations / 1e6
             cpi = core_measures[i]['cycle-count'] / core_measures[i]['instructions']
-            mcpi = core_measures[i]['cycle_activity.stalls_ldm_pending'] / core_measures[i]['instructions']
+            mcpi = core_measures[i]['cycle_activity.stalls_l3_miss'] / core_measures[i]['instructions']
             ccpi = cpi - mcpi
             core_stats[i]['BIPS'] = bips
             core_stats[i]['Util'] = core_measures[i]['cycle-count'] / (core_measures[i]['Freq(kHz)'] * self.durations)
@@ -58,6 +56,9 @@ class PPEPRecord():
             core_stats[i]['uop/inst'] = core_measures[i]['uops_executed.core'] / core_measures[i]['instructions']
             core_stats[i]['bmiss/inst'] = core_measures[i]['branch-misses'] / core_measures[i]['instructions']
             core_stats[i]['cmiss/inst'] = core_measures[i]['cache-misses'] / core_measures[i]['instructions']
+            core_stats[i]['fp/inst'] = core_measures[i]['fp_arith_inst_retired.vector'] / core_measures[i]['instructions']
+            core_stats[i]['amx/inst'] = core_measures[i]['exe.amx_busy'] / core_measures[i]['instructions']
+            core_stats[i]['stall/inst'] = core_measures[i]['cycle_activity.stalls_total'] / core_measures[i]['instructions']
 
         carr = np.zeros((len(df), self.num_pkg, self.core_per_pkg, len(self.counters)))
         statarr = np.zeros((len(df), self.num_pkg, self.core_per_pkg, len(self.stats)))
@@ -89,9 +90,9 @@ class PPEPData:
         self.pstats = []
         self.power = []
         self.idlemodel = file_to_poly(ifile)
-        print(self.idlemodel)
+        #print(self.idlemodel)
         self.vfmodel = file_to_poly(vffile)
-        print(self.vfmodel)
+        #print(self.vfmodel)
         for fname in filenames:
             mydf = pd.read_csv(fname)
             mydf = filter_active(mydf)
@@ -100,25 +101,26 @@ class PPEPData:
             pkgctrdata = myrecord.coredata.sum(axis=2)
             pkgstatdata = myrecord.corestat.mean(axis=2)
             
-            pkgstatdata[:,:,3] *= 10 # bips is sum
-            pkgctrdata[:,:,0] *= 0.1 # voltage is average
+            pkgstatdata[:,:,3] *= NUMCORE # bips is sum
+            pkgctrdata[:,:,0] *= 1.0/NUMCORE # voltage is average
             pkgctrdata[:,:,1] *= 1e-7 # Freq is average and convert to ghz
-            pkgctrdata[:,:,2] *= 0.1 # Temp is average
+            pkgctrdata[:,:,2] *= 1.0/NUMCORE # Temp is average
 
             pkgpower = myrecord.pkgdata[:,:,1]
             pkgvolt = pkgctrdata[:,:, 0]
             pkgbips = pkgstatdata[:,:,3]
             pkgutil = pkgstatdata[:,:,0]
-            pkgbcps = pkgutil * pkgctrdata[:,:,1] * 10 # bcps is also sum
+            pkgbcps = pkgutil * pkgctrdata[:,:,1] * NUMCORE # bcps is also sum
             pkgstats = pkgstatdata[:,:,4:] * pkgbips[:,:,None]
             pkgstats = np.concatenate([pkgstats, pkgbips[:,:,None], pkgbcps[:,:,None]], axis=-1)
 
-            self.voltages += [pkgvolt[:,0], pkgvolt[:,1]]
-            self.pstats += [pkgstats[:,0,:], pkgstats[:,1,:]]
-            self.power += [pkgpower[:,0], pkgpower[:,1]]
+            self.voltages += [pkgvolt[:,i] for i in range(pkgvolt.shape[1])]
+            self.pstats += [pkgstats[:,i,:] for i in range(pkgstats.shape[1])]
+            self.power += [pkgpower[:,0] for i in range(pkgpower.shape[1])]
         self.voltages = np.concatenate(self.voltages, axis=0)
         self.pstats = np.concatenate(self.pstats, axis=0)
         self.power = np.concatenate(self.power, axis=0)
 
 if __name__ == '__main__':
-    mydata = PPEPData(['gnn_tts_2600.csv', 'llama_stablediffusion_2600.csv'])
+    mydata = PPEPData(['active/BERT_pytorch_bf16_turbo.csv', 'active/BERT_pytorch_fp32_noturbo.csv'])
+    print(mydata.pstats.shape)

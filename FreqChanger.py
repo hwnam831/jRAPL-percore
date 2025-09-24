@@ -8,13 +8,13 @@ import threading
 import logging
 import random
 
-maxfreq=2600
-minfreq=1200
+maxfreq=3000
+minfreq=800
 steps=[-300,-200,-100,100,200,300]
-num_cores = 20
+num_cores = 28
 
 def set_freq(freq):
-    os.system("cpupower frequency-set -f {}MHz >/dev/null 2>&1".format(freq))
+    os.system(f"sudo cpufreq-set -c $i -d {freq}MHz -u {freq}MHz -f {freq}MHz >/dev/null 2>&1")
 
 if __name__=='__main__':
     starttime=time.time()
