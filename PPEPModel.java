@@ -50,12 +50,12 @@ public class PPEPModel {
     //public static native void close();
     //public static native float[] forward(float[] flat_input); // 4 cpu power coefs + 2 dram power coefs + 2 bips coefs
     
-    public float freq_max = 2.8f/4;
-    public float freq_min = 0.9f/4;
+    public float freq_max = 3.0f/4;
+    public float freq_min = 0.8f/4;
     public int num_pkg;
     public int num_core;
-    // uop, bmiss, cmiss, bips, bcps
-    public int num_counters = 5;
+    // uop, bmiss, cmiss, bips, bcps, amx, fp, stall
+    public int num_counters = 8;
     
     public float[] idle_coefs;
     public float[] vf_poly;
@@ -99,7 +99,7 @@ public class PPEPModel {
 
         this.idle_coefs = readFile(fname_idle, 4);
         this.vf_poly = readFile(fname_vfpoly, 3);
-        this.active_coefs = readFile(fname_active, 5);
+        this.active_coefs = readFile(fname_active, this.num_counters);
         //this.active_coef_compiled = new float[num_pkg][num_core];
         //this.mcpi = new float[num_pkg][num_core];
         //this.ccpi = new float[num_pkg][num_core];
@@ -134,24 +134,29 @@ public class PPEPModel {
                 float util = bcps/freq;
                 float ldm_stalls = ctrs[5];
                 float cache_misses = ctrs[6];
-                float branch_misses = ctrs[7];
-                float uops = ctrs[8];
+                float stalls = ctrs[7];
+                float branch_misses = ctrs[8];
+                float amx = ctrs[9];
+                float fp_arith = ctrs[10];
+                float uops = ctrs[11];
 
                 float mcpi = ldm_stalls/bips;
                 float cpi = bcps/bips;
                 float ccpi = cpi - mcpi;
                 //this.mcpi[p][c] = mcpi;
                 //this.ccpi[p][c] = ccpi;
-                //coef: uop, bmiss, cmiss, bips, bcps
+                //coef: 'uop/inst', 'bmiss/inst', 'cmiss/inst', 'fp/inst', 'amx/inst', 'stall/inst', bips, bcps
                 float active_coef_compiled = 
                     this.active_coefs[0]*uops + this.active_coefs[1]*branch_misses + 
-                    this.active_coefs[2]*cache_misses + this.active_coefs[3]*bips + this.active_coefs[4]*bcps;
+                    this.active_coefs[2]*cache_misses + this.active_coefs[3]*fp_arith +
+                    this.active_coefs[4]*amx + this.active_coefs[5]*stalls +
+                    this.active_coefs[6]*bips + this.active_coefs[7]*bcps;
 
                 //compute power prediction  
                 float idle_power = this.idle_coefs[0]*voltage*voltage*voltage + 
                     this.idle_coefs[1]*voltage*voltage + this.idle_coefs[2]*voltage + this.idle_coefs[3];
                 
-                float dyn_power = active_coef_compiled * ((1/0.512f)*voltage*voltage*voltage + voltage);
+                float dyn_power = active_coef_compiled * ((1/0.64f)*voltage*voltage + voltage);
                 idle_power /= this.num_core; //currently, idle power is a per-package model
                 
                 pkg_idle_power += idle_power;
@@ -161,7 +166,7 @@ public class PPEPModel {
                 float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
                 float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
-                float dPdyndB = dyn_power/bips + active_coef_compiled * ((3/0.512f)*voltage*voltage + 1) * dVdB;
+                float dPdyndB = dyn_power/bips + active_coef_compiled * ((2/0.64f)*voltage + 1) * dVdB;
                 float dPidledB = (3*this.idle_coefs[0]*voltage*voltage + 2*this.idle_coefs[1]*voltage + this.idle_coefs[2]) * dVdB / this.num_core;
                 this.dBIPSdP[p] += 1/(dPdyndB + dPidledB)/this.num_core;
                 //this.dBIPSdP[p] += 1/dPdyndB;
@@ -172,8 +177,7 @@ public class PPEPModel {
             this.predicted_idle[p] = pkg_idle_power* this.power_adjust[p];
             //float measured_dyn = measured_power[p] - pkg_idle_power;
 
-            this.power_adjust[p] = (measured_power[p]/(pkg_dyn_power+pkg_idle_power)
-                                     + 3*this.power_adjust[p])/4;
+            this.power_adjust[p] = (measured_power[p]/(pkg_dyn_power+pkg_idle_power)+ 3*this.power_adjust[p])/4;
         }
     }
 

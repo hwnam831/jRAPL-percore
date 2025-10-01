@@ -68,7 +68,7 @@ public class LocalController{
         ArgumentParser parser = ArgumentParsers.newFor("LocalController").build()
                 .defaultHelp(true);
         parser.addArgument("-p","--policy")
-                .choices("fair", "slurm", "ml", "localml", "ml2", "central").setDefault("fair");
+                .choices("fair", "slurm", "ml", "localml", "central").setDefault("fair");
         parser.addArgument("-c", "--cap").type(Integer.class)
                 .setDefault(150).help("Power cap for this node");
         parser.addArgument("--period").type(Integer.class)
@@ -113,9 +113,10 @@ public class LocalController{
         int epochs = (((Integer) res.get("duration")) * 1000) / timeperiodms;
         int graceepochs = ((Integer)res.get("graceperiod")*1000)/timeperiodms;
         
-        String tag = (String) res.get("tag");
-        TraceCollectorThread traceCollector = new TraceCollectorThread(16, sampleperiodms, policy 
-            +"-" + tag + "-" + (Integer)res.get("cap") + "W-raw.csv", timeperiodms);
+        //String tag = (String) res.get("tag");
+        //String csvfilename = policy +"-" + tag + "-" + (Integer)res.get("cap") + "W-raw.csv";
+        String csvfilename = "";
+        TraceCollectorThread traceCollector = new TraceCollectorThread(16, sampleperiodms, csvfilename , timeperiodms);
         int num_pkg = traceCollector.num_sockets;
         int core_per_pkg = traceCollector.threadNum/traceCollector.num_sockets;
         PPEPModel mymodel = new PPEPModel(num_pkg, core_per_pkg, "ppep/idlemodel.txt", "ppep/vfpoly.txt","ppep/activecoef.txt");
@@ -219,11 +220,6 @@ public class LocalController{
             float[] edp_gradients = mymodel.getPerfGradients(cpupower, curperf);
             if (policy.equals("localml")){
                 edp_gradients = mymodel.getB2PGradients(cpupower, curperf);
-            } else if (policy.equals("ml2")){
-                for (int i = 0; i<edp_gradients.length; i++){
-                    moving_grads[i] = (float)((1-alpha)*moving_grads[i] + alpha*edp_gradients[i]);
-                    edp_gradients[i] = moving_grads[i];
-                }
             }
             
             records.newLine();
@@ -268,158 +264,6 @@ public class LocalController{
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] += (tolerance + pool) / newpl.length;
                 }
-            } else if (policy.equals("ml")){
-                
-                double sum_newpl = 0;
-                double grad_sum=0;
-                
-                for (int i = 0; i<newpl.length; i++){
-                    grad_sum += edp_gradients[i];            
-                }
-                if (grad_sum > grad_max){
-                    lr = grad_max/grad_sum;
-                } else if(grad_sum < -grad_max){
-                    lr = -grad_max/grad_sum;
-                } else {
-                    lr = 1;
-                }
-                //
-                
-                for (int i = 0; i<newpl.length; i++){
-                    
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
-                    /*
-                    if (newpl[i] > power_max){
-                        newpl[i] = power_max;
-                    } else if (newpl[i] < power_min){
-                        newpl[i] = power_min;
-                    }
-                    */
-                    sum_newpl += newpl[i];              
-                }
-                double remainder = 0;
-                int eff_len = newpl.length;
-                //
-                if (sum_newpl > totalcap + tolerance){
-                    double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
-                    /*
-                    double[] coefs = new double[newpl.length];
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] -= delta;
-                        if (newpl[i] < power_min){
-                            remainder += power_min - newpl[i];
-                            eff_len--;
-                            newpl[i] = power_min;
-                            coefs[i] = 0;
-                        }else{
-                            coefs[i] = 1;
-                        }
-                    }
-                    for (int i = 0; i<newpl.length; i++){
-                        if(eff_len <= 0){
-                            break;
-                        }
-                        newpl[i] -= coefs[i]*remainder/eff_len;
-                    }
-                    */
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] -= delta;
-                    }
-                    
-                } else {
-                    double delta = (totalcap - sum_newpl)/newpl.length;
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] += delta;
-                    }
-                }
-                //corner-case: minimum freq
-                if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 1 && 
-                    avgfreqs[1] > freq_min){
-                    newpl[0] = curpl[0] + 1;
-                    if (newpl[0] + newpl[1] > totalcap){
-                        newpl[1] = totalcap - newpl[0];
-                    }
-                } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 1 &&
-                            avgfreqs[0] > freq_min){
-                    newpl[1] = curpl[1] + 1;
-                    if (newpl[0] + newpl[1] > totalcap){
-                        newpl[0] = totalcap - newpl[1];
-                    }
-                }
-
-            } else if (policy.equals("ml2")){
-                double sum_newpl = 0;
-                double grad_sum=0;
-                double b2p0 = 1.0 + curperf[0]*curperf[0]/cpupower[0];
-                double b2p1 = 1.0 + curperf[1]*curperf[1]/cpupower[1];
-                double geomb2p = Math.sqrt(b2p0*b2p1);
-                edp_gradients[0] = (float)(edp_gradients[0]*geomb2p/b2p0);
-                edp_gradients[1] = (float)(edp_gradients[1]*geomb2p/b2p1);
-                for (int i = 0; i<newpl.length; i++){
-                    grad_sum += edp_gradients[i];            
-                }
-                if (grad_sum > grad_max){
-                    lr = grad_max/grad_sum;
-                } else if(grad_sum < -grad_max){
-                    lr = -grad_max/grad_sum;
-                } else {
-                    lr = 1;
-                }
-                //
-                
-                for (int i = 0; i<newpl.length; i++){
-                    
-                    newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
-                    if (newpl[i] > power_max){
-                        newpl[i] = power_max;
-                    } else if (newpl[i] < power_min){
-                        newpl[i] = power_min;
-                    }
-                    sum_newpl += newpl[i];              
-                }
-                double remainder = 0;
-                int eff_len = newpl.length;
-                double[] coefs = new double[newpl.length];
-                if (sum_newpl > totalcap + tolerance){
-                    double delta = (sum_newpl - totalcap - tolerance)/newpl.length;
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] -= delta;
-                        if (newpl[i] < power_min){
-                            remainder += power_min - newpl[i];
-                            eff_len--;
-                            newpl[i] = power_min;
-                            coefs[i] = 0;
-                        }else{
-                            coefs[i] = 1;
-                        }
-                    }
-                    for (int i = 0; i<newpl.length; i++){
-                        if(eff_len <= 0){
-                            break;
-                        }
-                        newpl[i] -= coefs[i]*remainder/eff_len;
-                    }
-                } else {
-                    double delta = (totalcap - sum_newpl)/newpl.length;
-                    for (int i = 0; i<newpl.length; i++){
-                        newpl[i] += delta/2;
-                    }
-                }
-                //corner-case: minimum freq
-                if (avgfreqs[0] < freq_min && newpl[0] < curpl[0] + 0.5 && 
-                    avgfreqs[1] > freq_min  && newpl[1] > power_min){
-                    newpl[0] = curpl[0] + 0.5;
-                    if (newpl[0] + newpl[1] > totalcap){
-                        newpl[1] = totalcap - newpl[0];
-                    }
-                } else if (avgfreqs[1] < freq_min && newpl[1] < curpl[1] + 0.5 &&
-                            avgfreqs[0] > freq_min && newpl[0] > power_min){
-                    newpl[1] = curpl[1] + 0.5;
-                    if (newpl[0] + newpl[1] > totalcap){
-                        newpl[0] = totalcap - newpl[1];
-                    }
-                }
-
             } else if (policy.equals("localml")){
                 for (int i = 0; i<newpl.length; i++){
                     newpl[i] = curpl[i] - alpha*(curpl[i] - cpupower[i]) + lr*edp_gradients[i];
@@ -507,8 +351,8 @@ class PowerControllerThread extends Thread{
     //public double[] curpl;
     public NodeStatus curpl;
     static final double pl2ratio = 1.2;
-    public final double default_pl1 = 105.0;
-    public final double default_pl2 = 126.0;
+    public final double default_pl1 = 185.0;
+    public final double default_pl2 = 225.0;
     public final int default_timewindow = 1000;
     int num_sockets;
     boolean running = true;
@@ -560,15 +404,14 @@ class PowerControllerThread extends Thread{
             double totaldBdP = 0;
             double total_curpower = 0;
             
+            String message = "";
             for (int pkg=0; pkg<curpl.numSocket; pkg++){
                     totalBIPS += curpl.bips[pkg];
                     totaldBdP += curpl.dBdP[pkg];
                     total_curpower += curpl.usages[pkg];
+                    message += String.format("%f,%f,%f,%f,%f",
+                                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.freq[0]/1e6f,curpl.dBdP[0]);
             }
-            
-            String message = String.format("%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
-                    curpl.usages[0],curpl.bips[0],curpl.util[0],curpl.freq[0]/1e6f,curpl.dBdP[0],
-                    curpl.usages[1],curpl.bips[1],curpl.util[1],curpl.freq[1]/1e6f,curpl.dBdP[1]);
 
             if (!parentip.equals("")){
                 try{
@@ -580,13 +423,19 @@ class PowerControllerThread extends Thread{
                     dout.writeUTF(message);
                     String newPKGLimit = reader.readLine();
                     String[] limits = newPKGLimit.split(",");
-                    double cap0 = Double.parseDouble(limits[0]);
-                    double cap1 = Double.parseDouble(limits[1]);
-                    totalcap = cap0 + cap1;
+
+                    double[] cap = new double[curpl.numSocket];
+                    this.totalcap = 0.0;
+                    for (int pkg=0; pkg<curpl.numSocket; pkg++){
+                        cap[pkg] = Double.parseDouble(limits[pkg]);
+                        totalcap += cap[pkg];
+                    }
+                    
                     if (this.centralized){
                         synchronized(curpl){
-                            curpl.limits[0] = cap0;
-                            curpl.limits[1] = cap1;
+                            for (int pkg=0; pkg<curpl.numSocket; pkg++){
+                                curpl.limits[pkg] = cap[pkg];
+                            }
                         }
                     }
                     reader.close();

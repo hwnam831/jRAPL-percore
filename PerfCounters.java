@@ -116,7 +116,7 @@ class TraceCollectorThread extends Thread{
         }
         perfCounters = new ArrayDeque<PerfCounters>();
         this.tracecount = 0;
-        int nctrs = PerfCheckUtils.eventNum + 5;
+        int nctrs = PerfCheckUtils.eventNum + counters.split(",").length + 1;
         moving_input = new float[threadNum][nctrs];
         moving_power = new float[num_sockets];
         moving_dram = new float[num_sockets];
@@ -163,19 +163,26 @@ class TraceCollectorThread extends Thread{
     }
     public void run(){
         PrintWriter fwriter;
-        try {
+        if (csvfile.equals("")){
 
-            fwriter = new PrintWriter(new FileOutputStream(csvfile));
-            String counters = "cycle_activity.stalls_l3_miss,cache-misses,cycle_activity.stalls_total,branch-misses,exe.amx_busy,uops_executed.core,fp_arith_inst_retired.vector";
-            String[] ctrs = counters.split(",");
-		    String firstLine = "Time(ms),Duration(ms)";
-            for (int i=0; i<num_sockets; i++){
-                firstLine += after[i].headerCSV();
-            }
-            fwriter.println(firstLine + ",Valid");
-        } catch (Exception e) {
             fwriter = new PrintWriter(OutputStream.nullOutputStream());
+
+        } else {
+            try {
+                fwriter = new PrintWriter(new FileOutputStream(csvfile));
+                String counters = "cycle_activity.stalls_l3_miss,cache-misses,cycle_activity.stalls_total,branch-misses,exe.amx_busy,uops_executed.core,fp_arith_inst_retired.vector";
+                String[] ctrs = counters.split(",");
+                String firstLine = "Time(ms),Duration(ms)";
+                for (int i=0; i<num_sockets; i++){
+                    firstLine += after[i].headerCSV();
+                }
+                fwriter.println(firstLine + ",Valid");
+            } catch (Exception e) {
+                fwriter = new PrintWriter(OutputStream.nullOutputStream());
+            }       
+
         }
+            
         while (running){
             for (int i=0; i<num_sockets; i++){
                 before[i].copyFrom(after[i]);
