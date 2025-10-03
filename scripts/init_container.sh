@@ -1,0 +1,1 @@
+sudo docker run -d -it -v /mydata:/mydata --name="$1" hwnam831/$1
