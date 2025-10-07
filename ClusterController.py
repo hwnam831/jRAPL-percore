@@ -114,7 +114,7 @@ power_max = 185
 power_min = 100
 grad_max = 5.0
 alpha = 0.2
-default_lr = 2.0
+default_lr = 5.0
 min_freq = 0.8
 
 def printcsv(starttime, NSOC=2):
@@ -282,9 +282,9 @@ if __name__ == '__main__':
                         newpl = nodeStatuses[c]['Limit:'+str(s)] - delta
                         
                         if nodeStatuses[c]['Freq:'+str(s)] < min_freq:
-                            remainder += nodeStatuses[c]['Limit:'+str(s)] + 1 - newpl
+                            remainder += nodeStatuses[c]['Limit:'+str(s)] + 5 - newpl
                             eff_len = eff_len -1
-                            newpl = nodeStatuses[c]['Limit:'+str(s)] + 1
+                            newpl = nodeStatuses[c]['Limit:'+str(s)] + 5
                             coefs[c][s] = 0
                         else:
                             coefs[c][s] = 1
