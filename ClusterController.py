@@ -112,17 +112,17 @@ def ControllerServer(periodms=1000, nsocket=2):
 
 power_max = 185
 power_min = 100
-grad_max = 2.0
+grad_max = 5.0
 alpha = 0.2
-default_lr = 5.0
-min_freq = 1.0
+default_lr = 2.0
+min_freq = 0.8
 
 def printcsv(starttime, NSOC=2):
     csvlines=[str(int((time.time()-starttime)*1000))]
 
     for c in clients:
         for s in range(NSOC):
-            b2p_grad = max(min(nodeStatuses[c]['dBIPS/dPower:'+str(s)],grad_max), -grad_max)
+            b2p_grad = nodeStatuses[c]['dBIPS/dPower:'+str(s)]
             csvlines += [str(nodeStatuses[c]['Limit:'+str(s)]),str(nodeStatuses[c]['Consumption:'+str(s)]),
                         str(nodeStatuses[c]['BIPS:'+str(s)]),str(nodeStatuses[c]['Util:'+str(s)]),str(nodeStatuses[c]['Freq:'+str(s)]),str(b2p_grad)]
 
@@ -291,7 +291,7 @@ if __name__ == '__main__':
                         nodeStatuses[c]['Limit:'+str(s)] = newpl
                     
                 for c in clients:
-                    if eff_len <= 0:
+                    if eff_len <= 0.1:
                         break
                     for s in range(NSOC):
                         nodeStatuses[c]['Limit:'+str(s)] -= coefs[c][s]*remainder/eff_len

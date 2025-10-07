@@ -15,6 +15,7 @@ all: install microbench classes disable_smt
 
 disable_smt:
 	echo off | sudo tee /sys/devices/system/cpu/smt/control
+	bash set_governor.sh performance
 
 classes: EnergyCheckUtils.class PerfCheckUtils.class TraceCollector.class PerfCounters.class PPEPModel.class LocalController.class
 
