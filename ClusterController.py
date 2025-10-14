@@ -110,11 +110,10 @@ def ControllerServer(periodms=1000, nsocket=2):
     print("server stopped", file=sys.stderr)
     serverSocket.close()
 
-power_max = 185
+power_max = 200
 power_min = 100
 grad_max = 5.0
 alpha = 0.2
-default_lr = 5.0
 min_freq = 0.8
 
 def printcsv(starttime, NSOC=2):
@@ -144,6 +143,8 @@ if __name__ == '__main__':
                 default='-1',help="experiment duration in seconds")
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
+    parser.add_argument("--lr", type=float,
+                default='8',help="learning rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
@@ -167,7 +168,7 @@ if __name__ == '__main__':
     prevbips = {}
     prevpower = {}
     peakratio = {}
-
+    default_lr = args.lr
 
     while serverRunning:
         sleeptime = max(nextTime - time.time(), 0.0001)
