@@ -7,7 +7,7 @@ import java.util.ArrayDeque;
 class PerfCounters{
     public long timems;
     public float[][] pkgCtrs;
-    public static final int freqRange = 4000000;
+    public static final int freqRange = 1000000;
     public static final int tempRange = 90;
     public static final float perNsMax = 100;
     public float[][] coreCtrs;

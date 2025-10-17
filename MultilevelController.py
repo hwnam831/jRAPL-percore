@@ -13,9 +13,11 @@ myPort = 4545
 serverRunning = True
 lockStatus = threading.Lock()
 clients = []
+subclusters = []
+subclusterLimits = []
 powerTargets = {}
 nodeStatuses = {}
-pernodelimit = 60.0
+clusterPowerLimit = 120.0
 inc_threshold = 0.9
 dec_threshold = 0.8
 inc_percentile = 1.1
@@ -27,10 +29,12 @@ def signal_handler(sig, frame):
     global serverRunning
     serverRunning = False
 
-def ControllerServer(periodms=1000):
+def ControllerServer(periodms=1000, nsocket=2, subclustersize=2):
 
     global nodeStatuses
     global clients
+    global subclusters
+    global subclusterLimits
 
     #clusterPowerLimit = plimit
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -51,24 +55,25 @@ def ControllerServer(periodms=1000):
             initialflag = True
             lockStatus.acquire()
             clients.append(clientAddress)
+            clients.sort(key=lambda x: int(x.split('.')[-1]))
+            subclusters = []
+            subclusterLimits = []
+            for idx in range(0,len(clients),subclustersize):
+                subclusters.append(clients[idx:idx+subclustersize])
+                subclusterLimits.append(len(subclusters[-1])*clusterPowerLimit/len(clients))
             
-            nodeStatuses[clientAddress] = {
-                'Limit:0' : pernodelimit/2,
-                'Consumption:0' : pernodelimit/2,
-                'BIPS:0' : 0.0,
-                'Util:0' : 1.0,
-                'Freq:0' : 2.0,
-                'dBIPS/dPower:0' : 0.0,
-                'Limit:1' : pernodelimit/2,
-                'Consumption:1' : pernodelimit/2,
-                'BIPS:1' : 0.0,
-                'Util:1' : 1.0,
-                'Freq:0' : 2.0,
-                'dBIPS/dPower:1' : 0.0,
-            }
-            for c in clients:
-                nodeStatuses[c]['Limit:0'] = pernodelimit/2
-                nodeStatuses[c]['Limit:1'] = pernodelimit/2
+            nodeStatuses[clientAddress] = {}
+            socketlimit = clusterPowerLimit/len(clients)/nsocket
+            for s in range(nsocket):
+                nodeStatuses[clientAddress]['Limit:'+str(s)] = socketlimit
+                nodeStatuses[clientAddress]['Consumption:'+str(s)] = socketlimit
+                nodeStatuses[clientAddress]['BIPS:'+str(s)] = 0.0
+                nodeStatuses[clientAddress]['Util:'+str(s)] = 1.0
+                nodeStatuses[clientAddress]['Freq:'+str(s)] = 2.0
+                nodeStatuses[clientAddress]['dBIPS/dPower:'+str(s)] = 0.0
+
+                for c in clients:
+                    nodeStatuses[c]['Limit:'+str(s)] = socketlimit
             print("New client at: " + str(clientAddress) + " Now total " + str(len(clients)), file=sys.stderr)
             lockStatus.release()
 
@@ -82,44 +87,31 @@ def ControllerServer(periodms=1000):
             lockStatus.acquire()
             gamma = (200.0) / periodms
             if initialflag:
-                nodeStatuses[clientAddress]['Consumption:0'] = float(dataStrList[0])
-                nodeStatuses[clientAddress]['BIPS:0'] = float(dataStrList[1])
-                nodeStatuses[clientAddress]['Util:0'] = float(dataStrList[2])
-                nodeStatuses[clientAddress]['Freq:0'] = float(dataStrList[3])
-                nodeStatuses[clientAddress]['dBIPS/dPower:0'] = float(dataStrList[4])
-
-                nodeStatuses[clientAddress]['Consumption:1'] = float(dataStrList[5])
-                nodeStatuses[clientAddress]['BIPS:1'] = float(dataStrList[6])
-                nodeStatuses[clientAddress]['Util:1'] = float(dataStrList[7])
-                nodeStatuses[clientAddress]['Freq:1'] = float(dataStrList[8])
-                nodeStatuses[clientAddress]['dBIPS/dPower:1'] = float(dataStrList[9])
+                for s in range(nsocket):
+                    offset = s*5
+                    nodeStatuses[clientAddress]['Consumption:'+str(s)] = float(dataStrList[offset+0])
+                    nodeStatuses[clientAddress]['BIPS:'+str(s)] = float(dataStrList[offset+1])
+                    nodeStatuses[clientAddress]['Util:'+str(s)] = float(dataStrList[offset+2])
+                    nodeStatuses[clientAddress]['Freq:'+str(s)] = float(dataStrList[offset+3])
+                    nodeStatuses[clientAddress]['dBIPS/dPower:'+str(s)] = float(dataStrList[offset+4])
             else:
-                nodeStatuses[clientAddress]['Consumption:0'] = \
-                    nodeStatuses[clientAddress]['Consumption:0'] * (1 - gamma) + gamma * float(dataStrList[0])
-                nodeStatuses[clientAddress]['BIPS:0'] = \
-                    nodeStatuses[clientAddress]['BIPS:0'] * (1 - gamma) + gamma * float(dataStrList[1])
-                nodeStatuses[clientAddress]['Util:0'] = \
-                    nodeStatuses[clientAddress]['Util:0'] * (1 - gamma) + gamma * float(dataStrList[2])
-                nodeStatuses[clientAddress]['Freq:0'] = \
-                    nodeStatuses[clientAddress]['Freq:0'] * (1 - gamma) + gamma * float(dataStrList[3])
-                nodeStatuses[clientAddress]['dBIPS/dPower:0'] = \
-                    nodeStatuses[clientAddress]['dBIPS/dPower:0'] * (1 - gamma) + gamma * float(dataStrList[4])
-
-                nodeStatuses[clientAddress]['Consumption:1'] = \
-                    nodeStatuses[clientAddress]['Consumption:1'] * (1 - gamma) + gamma * float(dataStrList[5])
-                nodeStatuses[clientAddress]['BIPS:1'] = \
-                    nodeStatuses[clientAddress]['BIPS:1'] * (1 - gamma) + gamma * float(dataStrList[6])
-                nodeStatuses[clientAddress]['Util:1'] = \
-                    nodeStatuses[clientAddress]['Util:1'] * (1 - gamma) + gamma * float(dataStrList[7])
-                nodeStatuses[clientAddress]['Freq:1'] = \
-                    nodeStatuses[clientAddress]['Freq:1'] * (1 - gamma) + gamma * float(dataStrList[8])
-                nodeStatuses[clientAddress]['dBIPS/dPower:1'] = \
-                    nodeStatuses[clientAddress]['dBIPS/dPower:1'] * (1 - gamma) + gamma * float(dataStrList[9])
+                for s in range(nsocket):
+                    offset = s*5
+                    nodeStatuses[clientAddress]['Consumption:'+str(s)] = \
+                        nodeStatuses[clientAddress]['Consumption:'+str(s)] * (1 - gamma) + gamma * float(dataStrList[offset+0])
+                    nodeStatuses[clientAddress]['BIPS:'+str(s)] = \
+                        nodeStatuses[clientAddress]['BIPS:'+str(s)] * (1 - gamma) + gamma * float(dataStrList[offset+1])
+                    nodeStatuses[clientAddress]['Util:'+str(s)] = \
+                        nodeStatuses[clientAddress]['Util:'+str(s)] * (1 - gamma) + gamma * float(dataStrList[offset+2])
+                    nodeStatuses[clientAddress]['Freq:'+str(s)] = \
+                        nodeStatuses[clientAddress]['Freq:'+str(s)] * (1 - gamma) + gamma * float(dataStrList[offset+3])
+                    nodeStatuses[clientAddress]['dBIPS/dPower:'+str(s)] = \
+                        nodeStatuses[clientAddress]['dBIPS/dPower:'+str(s)] * (1 - gamma) + gamma * float(dataStrList[offset+4])
             lockStatus.release()
             
             
-            msg = str(nodeStatuses[clientAddress]['Limit:0'])+"," +\
-                  str(nodeStatuses[clientAddress]['Limit:1'])+"\n"
+            msg = ",".join([str(nodeStatuses[clientAddress]['Limit:'+str(s)]) for s in range(nsocket)]) + '\n'
+
             clientSocket.send(msg.encode(encoding="utf-8"))
             clientSocket.close()
         except Exception as e:
@@ -128,95 +120,63 @@ def ControllerServer(periodms=1000):
     print("server stopped", file=sys.stderr)
     serverSocket.close()
 
-power_max = 105
-power_min = 20
+power_max = 200
+power_min = 100
 grad_max = 5.0
 alpha = 0.2
-default_lr = 2.0
-min_freq = 1.2
+min_freq = 0.8
 
-def printcsv(starttime):
+def printcsv(starttime, NSOC=2):
     csvlines=[str(int((time.time()-starttime)*1000))]
-    totalbips = 0
-    totalpower = 0
+    csvlines += [str(sl) for sl in subclusterLimits]
     for c in clients:
-        totalbips += nodeStatuses[c]['BIPS:0']
-        totalbips += nodeStatuses[c]['BIPS:1']
-        totalpower += nodeStatuses[c]['Consumption:0']
-        totalpower += nodeStatuses[c]['Consumption:1']
-    for c in clients:
-        #b2p_grad = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:0'] - (totalbips/totalpower)*(totalbips/totalpower)
-        b2p_grad = nodeStatuses[c]['dBIPS/dPower:0']
-        csvlines += [str(nodeStatuses[c]['Limit:0']),str(nodeStatuses[c]['Consumption:0']),
-                     str(nodeStatuses[c]['BIPS:0']),str(nodeStatuses[c]['Util:0']),str(nodeStatuses[c]['Freq:0']),str(b2p_grad)]
-        #b2p_grad = 2*(totalbips/totalpower)*nodeStatuses[c]['dBIPS/dPower:1'] - (totalbips/totalpower)*(totalbips/totalpower)
-        b2p_grad = nodeStatuses[c]['dBIPS/dPower:1']
-        csvlines += [str(nodeStatuses[c]['Limit:1']),str(nodeStatuses[c]['Consumption:1']),
-                     str(nodeStatuses[c]['BIPS:1']),str(nodeStatuses[c]['Util:1']),str(nodeStatuses[c]['Freq:1']),str(b2p_grad)]
+        for s in range(NSOC):
+            b2p_grad = nodeStatuses[c]['dBIPS/dPower:'+str(s)]
+            csvlines += [str(nodeStatuses[c]['Limit:'+str(s)]),str(nodeStatuses[c]['Consumption:'+str(s)]),
+                        str(nodeStatuses[c]['BIPS:'+str(s)]),str(nodeStatuses[c]['Util:'+str(s)]),str(nodeStatuses[c]['Freq:'+str(s)]),str(b2p_grad)]
+
     print(','.join(csvlines))
 
-# 20 Tokens total
-# 12 tokens by default
-def requiredTokens(util, prevutil, bips, prevbips, token, prevtoken):
-    if token - prevtoken == 1:
-        if bips > prevbips:
-            return int(util * 20)
-        else:
-            return prevtoken
-    elif prevtoken - token == 1:
-        if bips < prevbips:
-            return int(util * 20)
-        else:
-            return prevtoken
-    elif util > prevutil:
-        return token + 1
-    elif util < prevutil:
-        return token - 1
-    else:
-        return int(util * 20)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--policy", type=str,
-                        choices=['slurm','ml','dps','fair','tokensmart','hierarchical','geoml'],
-                default='fair',help="policy")
     parser.add_argument("-l", "--limit", type=float,
-                default='60',help="per-node power limit")
+                default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='2000',help="time period in milliseconds")
-    parser.add_argument("--groupperiod", type=float,
-                default='8',help="cluster time period in seconds")
+                default='500',help="sub-cluster time period in milliseconds")
+    parser.add_argument("--centralperiodms", type=float,
+                default='4000',help="top-level time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
-                default='-1',help="experiment duration in seconds")
+                default='60',help="experiment duration in seconds")
+    parser.add_argument("--nsocket", type=int,
+                default='1',help="number of cpu sockets per node")
+    parser.add_argument("--subclustersize", type=int,
+                default='2',help="number of nodes per subclusters")
+    parser.add_argument("--lr", type=float,
+                default='2',help="learning rate")
+    parser.add_argument("--alpha", type=float,
+                default='0.1',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
 
-    pernodelimit = args.limit
-    controllerserver = threading.Thread(target=ControllerServer)
+    clusterPowerLimit = args.limit
+    NSOC = args.nsocket
+    controllerserver = threading.Thread(target=ControllerServer, args=(500,1, args.subclustersize))
     controllerserver.start()
 
     nextTime = time.time() + args.periodms/1000
-    nextGroup = time.time() + args.groupperiod
+    nextCentralTime = time.time() + args.centralperiodms/1000
     counter = 0.0
     deadline = None
     starttime = time.time()
     if args.duration > 0:
         deadline = starttime + args.duration
-    tokens = {}
-    prevtokens = {}
 
-    prevutils = {}
-
-    prevbips = {}
-    prevpower = {}
-    peakratio = {}
-    tokenpool = 0
-    starvationThreshold = 32
-
-
+    default_lr = args.lr
+    alpha = args.alpha
     while serverRunning:
         sleeptime = max(nextTime - time.time(), 0.0001)
         time.sleep(sleeptime)
@@ -228,104 +188,113 @@ if __name__ == '__main__':
         if (time.time() - starttime) < args.graceperiod:
             clients.sort(key=lambda x: int(x.split('.')[-1]))
             for c in clients:
-                nodeStatuses[c]['Limit:0'] = pernodelimit/2
-                nodeStatuses[c]['Limit:1'] = pernodelimit/2
+                for socket in range(NSOC):
+                    nodeStatuses[c]['Limit:'+str(socket)] = clusterPowerLimit/len(clients)/NSOC
             continue
+        
         lockStatus.acquire()
-        totalbips = 0.0
-        totalpower = 1e-6
+        
         b2p_grads = {}
-        
-        for c in clients:
-            totalbips += nodeStatuses[c]['BIPS:0']
-            totalbips += nodeStatuses[c]['BIPS:1']
-            totalpower += nodeStatuses[c]['Consumption:0']
-            totalpower += nodeStatuses[c]['Consumption:1']
-            if not c in tokens:
-                tokens[c] = [12,12]
-                prevtokens[c] = [12,12]
-                prevutils[c] = [nodeStatuses[c]['Util:0'],nodeStatuses[c]['Util:1']]
-                prevbips[c] = [nodeStatuses[c]['BIPS:0'],nodeStatuses[c]['BIPS:1']]
-                prevpower[c] = [nodeStatuses[c]['Consumption:0'],nodeStatuses[c]['Consumption:0']]
-                peakratio[c] = [peak_threshold,peak_threshold]
-            
-        for c in clients:
-            b2p_grads[c] = [nodeStatuses[c]['dBIPS/dPower:0'],nodeStatuses[c]['dBIPS/dPower:1']]
-            
-            
-        lr = default_lr
-        groups = []
-        group_limits = []
-        group_grads = []
-        group_pows = []
-        for i in range(0,len(clients),4):
-            groups.append(clients[i:i+4])
-        
-        for group in groups:
-            group_limit = 0
-            group_grad = 0
-            group_pow = 0
-            for c in group:
-                group_limit += nodeStatuses[c]['Limit:0'] + nodeStatuses[c]['Limit:1']
-                group_grad += (b2p_grads[c][0] + b2p_grads[c][1])/(2*len(group))
-                group_pow += nodeStatuses[c]['Consumption:0'] + nodeStatuses[c]['Consumption:1']
-            group_limits.append(group_limit)
-            group_grads.append(group_grad)
-            group_pows.append(group_pow)
-            totalpower += group_pow
-        clusterLimit = pernodelimit*len(clients)
+        subclusterConsumptions = []
+        subclusterGrads = []
+        for idx, subc in enumerate(subclusters):
+            totalgrad = 0.0
+            totalpower = 1e-6
+            subClusterlimit = subclusterLimits[idx]
+            for c in subc:
+                for s in range(NSOC):
+                    totalgrad += nodeStatuses[c]['dBIPS/dPower:' + str(s)]
+                    totalpower += nodeStatuses[c]['Consumption:'+str(s)]
+                
+            for c in subc:
+                b2p_grads[c] = [nodeStatuses[c]['dBIPS/dPower:' + str(s)] for s in range(NSOC)]
+            subclusterConsumptions.append(totalpower)
+            subclusterGrads.append(totalgrad)
 
-        # Infrequent group update
-        sum_newlimit = 0
-        if time.time() > nextGroup:
-            nextGroup = time.time() + args.groupperiod
-
-            for i in range(len(groups)):
-                group = groups[i]
-                group_limit = group_limits[i]
-                group_grad = group_grads[i]
-                group_pow = group_pows[i]
-                newlimit = group_limit - alpha*(group_limit - group_pow) + lr*group_grad
-                newlimit = max(power_min*2*len(group), newlimit)
-                newlimit = min(power_max*2*len(group), newlimit)
-                sum_newlimit += newlimit
-            groupdelta = (sum_newlimit - clusterLimit)/len(groups)
-            for i in range(len(groups)):
-                group_limits[i] = group_limits[i] - groupdelta
             
-        for i,group in enumerate(groups):
+                
             sum_newpl = 0
-            group_limit = group_limits[i]
-            for c in group:
-                curpl = nodeStatuses[c]['Limit:0'] + nodeStatuses[c]['Limit:1']
-                curusage = nodeStatuses[c]['Consumption:0'] + nodeStatuses[c]['Consumption:1']
-                nodegrad =(b2p_grads[c][0] + b2p_grads[c][1])*0.5
-                newpl = curpl - alpha*(curpl - curusage) + lr*nodegrad*0.5
-                newpl = max(power_min*2, newpl)
-                newpl = min(power_max*2, newpl)
+            grad_sum=0
+            
+            for c in subc:
+                grad_sum += sum([b2p_grads[c][s] for s in range(NSOC)])
+                
+            if grad_sum > grad_max * len(subc):
+                lr = default_lr * grad_max * len(subc)/grad_sum 
+            elif grad_sum < -grad_max:
+                lr = -default_lr * grad_max * len(subc)/grad_sum
+            else:
+                lr = default_lr
+
+            for c in subc:
+                for s in range(NSOC):
+                    curpl = nodeStatuses[c]['Limit:'+str(s)]
+                    newpl = curpl - alpha*(curpl - nodeStatuses[c]['Consumption:'+str(s)]) + lr*b2p_grads[c][s]
+                    newpl = max(power_min, newpl)
+                    newpl = min(power_max, newpl)
+                    sum_newpl += newpl
+                    nodeStatuses[c]['Limit:'+str(s)] = newpl
+
+            remainder = 0
+            eff_len = len(subc)*NSOC
+            coefs = {c:[1 for _ in range(NSOC)] for c in subc}
+            if sum_newpl > subClusterlimit:
+                delta = (sum_newpl - subClusterlimit)/len(subc)/NSOC
+                for c in subc:
+                    for s in range(NSOC):
+                        newpl = nodeStatuses[c]['Limit:'+str(s)] - delta
+                        
+                        if nodeStatuses[c]['Freq:'+str(s)] < min_freq:
+                            remainder += nodeStatuses[c]['Limit:'+str(s)] + 5 - newpl
+                            eff_len = eff_len -1
+                            newpl = nodeStatuses[c]['Limit:'+str(s)] + 5
+                            coefs[c][s] = 0
+                        else:
+                            coefs[c][s] = 1
+                        nodeStatuses[c]['Limit:'+str(s)] = newpl
+                    
+                for c in subc:
+                    if eff_len <= 0.1:
+                        break
+                    for s in range(NSOC):
+                        nodeStatuses[c]['Limit:'+str(s)] -= coefs[c][s]*remainder/eff_len
+        if time.time() > nextCentralTime:
+            nextCentralTime = time.time() + args.centralperiodms/1000
+            sum_newpl = 0
+            lr = default_lr / len(subclusters)
+            for idx in range(len(subclusters)):
+                curpl = subclusterLimits[idx]
+                newpl = curpl - alpha*(curpl - subclusterConsumptions[idx])/ len(subclusters) + lr*subclusterGrads[idx]
+                newpl = max(power_min*len(subclusters[idx]), newpl)
+                newpl = min(power_max*len(subclusters[idx]), newpl)
                 sum_newpl += newpl
-                nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] + (newpl-curpl)*0.5
-                nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] + (newpl-curpl)*0.5
+                subclusterLimits[idx] = newpl
+                pldiff = newpl - curpl
+                for c in subclusters[idx]:
+                    for s in range(NSOC):
+                        nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] + pldiff/len(subclusters[idx])/NSOC
             
-            delta = (sum_newpl - group_limit)/len(group)/2
-            for c in group:
-                nodeStatuses[c]['Limit:0'] = nodeStatuses[c]['Limit:0'] - delta
-                nodeStatuses[c]['Limit:1'] = nodeStatuses[c]['Limit:1'] - delta
-            
+            if sum_newpl > clusterPowerLimit:
+                delta = (sum_newpl - clusterPowerLimit)/len(subclusters)
+                for idx in range(len(subclusters)):
+                    subclusterLimits[idx] = subclusterLimits[idx] - delta
+                    for c in subclusters[idx]:
+                        for s in range(NSOC):
+                            nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] - delta/len(subclusters[idx])/NSOC
+
         
         lockStatus.release()
-        printcsv(starttime)
+        printcsv(starttime, NSOC=NSOC)
     print("controller stopped", file=sys.stderr)
     clientcount = 0
     headerstr = ['Time(ms)']
+    headerstr += ['SubclusterLimit:' + str(idx) for idx in range(len(subclusters))]
     for c in clients:
         clientcount += 1
-        headerstr += ['Limit:' + str(clientcount) + ":0",'Consumption:' + str(clientcount) + ":0",
-                      'BIPS:' + str(clientcount) + ":0",'Util:' + str(clientcount) + ":0",
-                      'Freq:' + str(clientcount) + ":0",'Grad:' + str(clientcount) + ":0"]
-        headerstr += ['Limit:' + str(clientcount) + ":1",'Consumption:' + str(clientcount) + ":1",
-                      'BIPS:' + str(clientcount) + ":1",'Util:' + str(clientcount) + ":1",
-                      'Freq:' + str(clientcount) + ":1",'Grad:' + str(clientcount) + ":1"]
+        for s in range(NSOC):
+            headerstr += [f"Limit:{clientcount}:{s}",f"Consumption:{clientcount}:{s}",
+                        f"BIPS:{clientcount}:{s}",f"Util:{clientcount}:{s}",
+                        f"Freq:{clientcount}:{s}",f"Grad:{clientcount}:{s}"]
     print(','.join(headerstr))
     print(clients, file=sys.stderr)
     controllerserver.join()
