@@ -146,7 +146,7 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float,
                 default='8',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.2',help="unused power give up rate")
+                default='0.1',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port

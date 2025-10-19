@@ -55,7 +55,7 @@ class Trace{
                 temperatures[core] = temperatures[core] / (instantCount+1);
             }
             counters[core] = PerfCheckUtils.getMultiPerfCounter(core+offset);
-            cycles[core] = EnergyCheckUtils.getClkCounter(core+offset);
+            cycles[core] = EnergyCheckUtils.getClkCounter(core+offset) / 2; //double-counts if smt is disabled.
             inst[core] = EnergyCheckUtils.getInstCounter(core+offset);
         }
         instantCount = 0;

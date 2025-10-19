@@ -132,6 +132,7 @@ public class PPEPModel {
                 float bips = ctrs[3];
                 float bcps = ctrs[4];
                 float util = bcps/freq;
+                util = util > 1 ? 1 : util; // safeguard
                 float ldm_stalls = ctrs[5];
                 float cache_misses = ctrs[6];
                 float stalls = ctrs[7];
@@ -164,6 +165,9 @@ public class PPEPModel {
 
                 //compute the gradients
                 float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
+                if (dBdf < 0){
+                    System.out.println("dBdf: " + dBdf + ", util:" + util + ", ccpi:" + ccpi + ", cpi:" + cpi + ", freq" + freq + ", bcps" + bcps );
+                }
                 float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
                 float dPdyndB = dyn_power/bips + active_coef_compiled * ((2/0.64f)*voltage + 1) * dVdB;
