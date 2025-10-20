@@ -136,7 +136,7 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='2000',help="time period in milliseconds")
+                default='8000',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
@@ -144,9 +144,9 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='8',help="learning rate")
+                default='4',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.1',help="unused power give up rate")
+                default='0.2',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port

@@ -1,5 +1,5 @@
 #Usage: clusterexp.sh [policy] [limit] [duration]
-TOTALCAP=$(($2))
+TOTALCAP=$(($2*32))
 DURATION=$(($3+120))
 #cd /mydata/workspace/faas-profiler;
 #./WorkloadInvoker -c warmup.json & sleep 70;

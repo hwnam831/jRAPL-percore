@@ -1,9 +1,6 @@
 mkdir -p bigcluster
-rsync -av hwnam831@ow2:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow3:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow4:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow5:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow6:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow7:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow8:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
-rsync -av hwnam831@ow9:/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+
+for i in $(seq 2 33); do
+    echo "ow"$i
+    rsync -av hwnam831@ow"$i":/mydata/workspace/jrapl/bigcluster\*.csv bigcluster/
+done
