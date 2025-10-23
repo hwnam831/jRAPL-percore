@@ -140,7 +140,8 @@ public class PPEPModel {
                 float amx = ctrs[9];
                 float fp_arith = ctrs[10];
                 float uops = ctrs[11];
-
+                float adjusted_bips = bips + amx * 255 + fp_arith * 15;
+                float adjusted_ratio = adjusted_bips / bips;
                 float mcpi = ldm_stalls/bips;
                 float cpi = bcps/bips;
                 float ccpi = cpi - mcpi;
@@ -165,9 +166,7 @@ public class PPEPModel {
 
                 //compute the gradients
                 float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
-                if (dBdf < 0){
-                    System.out.println("dBdf: " + dBdf + ", util:" + util + ", ccpi:" + ccpi + ", cpi:" + cpi + ", freq" + freq + ", bcps" + bcps );
-                }
+                dBdf *= adjusted_ratio;
                 float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
                 float dPdyndB = dyn_power/bips + active_coef_compiled * ((2/0.64f)*voltage + 1) * dVdB;
