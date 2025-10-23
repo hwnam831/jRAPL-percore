@@ -55,7 +55,7 @@ def print_b2p(folder_path):
         filename_parts = csv_file[:-4].split('_')
         csvparts = str.join(',',filename_parts)
         # [hyperparameter, lr1, period2000, alpha0.1, 130w, 130, cnn-serving]
-        configname = filename_parts[0] + '-' + filename_parts[4]
+        configname = filename_parts[0][:-1] + '-' + filename_parts[4]
         policy = filename_parts[1] + '-' + filename_parts[2] + '-' + filename_parts[3]
         app = filename_parts[-2]
         print(app)

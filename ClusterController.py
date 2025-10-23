@@ -114,7 +114,7 @@ power_max = 200
 power_min = 100
 grad_max = 5.0
 alpha = 0.1
-min_freq = 0.8
+min_freq = 0.9
 
 def printcsv(starttime, NSOC=2):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='4',help="learning rate")
+                default='8',help="learning rate")
     parser.add_argument("--alpha", type=float,
                 default='0.2',help="unused power give up rate")
     args=parser.parse_args()
@@ -299,6 +299,11 @@ if __name__ == '__main__':
                         break
                     for s in range(NSOC):
                         nodeStatuses[c]['Limit:'+str(s)] -= coefs[c][s]*remainder/eff_len
+            else:
+                excess = (clusterPowerLimit - sum_newpl)/len(clients)/NSOC
+                for c in clients:
+                    for s in range(NSOC):
+                        nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] + excess
 
         elif args.policy == 'slurm':
             pool = 0.0

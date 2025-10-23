@@ -143,9 +143,9 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='500',help="sub-cluster time period in milliseconds")
+                default='1000',help="sub-cluster time period in milliseconds")
     parser.add_argument("--centralperiodms", type=float,
-                default='4000',help="top-level time period in milliseconds")
+                default='8000',help="top-level time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--subclustersize", type=int,
-                default='2',help="number of nodes per subclusters")
+                default='4',help="number of nodes per subclusters")
     parser.add_argument("--lr", type=float,
                 default='2',help="learning rate")
     parser.add_argument("--alpha", type=float,
@@ -273,14 +273,13 @@ if __name__ == '__main__':
                 for c in subclusters[idx]:
                     for s in range(NSOC):
                         nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] + pldiff/len(subclusters[idx])/NSOC
-            
-            if sum_newpl > clusterPowerLimit:
-                delta = (sum_newpl - clusterPowerLimit)/len(subclusters)
-                for idx in range(len(subclusters)):
-                    subclusterLimits[idx] = subclusterLimits[idx] - delta
-                    for c in subclusters[idx]:
-                        for s in range(NSOC):
-                            nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] - delta/len(subclusters[idx])/NSOC
+
+            delta = (sum_newpl - clusterPowerLimit)/len(subclusters)
+            for idx in range(len(subclusters)):
+                subclusterLimits[idx] = subclusterLimits[idx] - delta
+                for c in subclusters[idx]:
+                    for s in range(NSOC):
+                        nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] - delta/len(subclusters[idx])/NSOC
 
         
         lockStatus.release()
