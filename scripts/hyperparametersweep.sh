@@ -7,44 +7,44 @@ cd /mydata/workspace/jrapl;
 mkdir -p results;
 
 ssh hwnam831@ow2 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W high 1" 2> /dev/null &
-ssh hwnam831@ow4 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter1_lr"$3"_period"$4"_"alpha"$5"_$1"W high 1" 2> /dev/null &
+ssh hwnam831@ow4 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter1_lr"$3"_period"$4"_"alpha"$5"_$1"W high 1" 2> /dev/null &
 ssh hwnam831@ow6 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W high 1" 2> /dev/null &
 ssh hwnam831@ow8 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W high 1" 2> /dev/null &
 
 ssh hwnam831@ow3 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W low 1" 2> /dev/null &
-ssh hwnam831@ow5 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W low 1" 2> /dev/null &
+ssh hwnam831@ow5 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W low 1" 2> /dev/null &
 ssh hwnam831@ow7 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W low 1" 2> /dev/null &
 ssh hwnam831@ow9 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter1_lr"$3"_period"$4"_alpha"$5"_"$1"W low 1" 2> /dev/null &
 
 ssh hwnam831@ow10 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W high 2" 2> /dev/null &
-ssh hwnam831@ow12 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter2_lr"$3"_period"$4"_"alpha"$5"_$1"W high 2" 2> /dev/null &
+ssh hwnam831@ow12 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter2_lr"$3"_period"$4"_"alpha"$5"_$1"W high 2" 2> /dev/null &
 ssh hwnam831@ow14 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W high 2" 2> /dev/null &
 ssh hwnam831@ow16 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W high 2" 2> /dev/null &
 
 ssh hwnam831@ow11 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W low 2" 2> /dev/null &
-ssh hwnam831@ow13 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W low 2" 2> /dev/null &
+ssh hwnam831@ow13 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W low 2" 2> /dev/null &
 ssh hwnam831@ow15 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W low 2" 2> /dev/null &
 ssh hwnam831@ow17 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter2_lr"$3"_period"$4"_alpha"$5"_"$1"W low 2" 2> /dev/null &
 
 ssh hwnam831@ow18 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W high 3" 2> /dev/null &
-ssh hwnam831@ow20 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter3_lr"$3"_period"$4"_"alpha"$5"_$1"W high 3" 2> /dev/null &
+ssh hwnam831@ow20 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter3_lr"$3"_period"$4"_"alpha"$5"_$1"W high 3" 2> /dev/null &
 ssh hwnam831@ow22 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W high 3" 2> /dev/null &
 ssh hwnam831@ow24 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W high 3" 2> /dev/null &
 
 ssh hwnam831@ow19 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W low 3" 2> /dev/null &
-ssh hwnam831@ow21 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W low 3" 2> /dev/null &
+ssh hwnam831@ow21 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W low 3" 2> /dev/null &
 ssh hwnam831@ow23 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W low 3" 2> /dev/null &
 ssh hwnam831@ow25 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter3_lr"$3"_period"$4"_alpha"$5"_"$1"W low 3" 2> /dev/null &
 
 ssh hwnam831@ow26 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W high 4" 2> /dev/null &
-ssh hwnam831@ow28 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter4_lr"$3"_period"$4"_"alpha"$5"_$1"W high 4" 2> /dev/null &
+ssh hwnam831@ow28 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter4_lr"$3"_period"$4"_"alpha"$5"_$1"W high 4" 2> /dev/null &
 ssh hwnam831@ow30 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W high 4" 2> /dev/null &
 ssh hwnam831@ow32 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W high 4" 2> /dev/null &
 
 ssh hwnam831@ow27 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" stable-diffusion hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W low 4" 2> /dev/null &
-ssh hwnam831@ow29 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" cnn-serving hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W low 4" 2> /dev/null &
+ssh hwnam831@ow29 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" yolov3 hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W low 4" 2> /dev/null &
 ssh hwnam831@ow31 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" vits-ljs  hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W low 4" 2> /dev/null &
 ssh hwnam831@ow33 "cd /mydata/workspace/jrapl; bash run_centralized.sh "$2" "$1" llama-3.1-8b hyperparameter4_lr"$3"_period"$4"_alpha"$5"_"$1"W low 4" 2> /dev/null &
 
 python3 ClusterController.py --policy ml --limit $TOTALCAP --duration $DURATION --periodms $4 --alpha $5 > results/hyperparameter_centralized_lr"$3"_period"$4"_alpha"$5"_"$1"W.csv;
-sleep 30;
+sleep 120;

@@ -121,7 +121,7 @@ def ControllerServer(periodms=1000, nsocket=2, subclustersize=2):
     serverSocket.close()
 
 power_max = 200
-power_min = 100
+power_min = 95
 grad_max = 5.0
 alpha = 0.2
 min_freq = 1.0
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='1000',help="sub-cluster time period in milliseconds")
+                default='2000',help="sub-cluster time period in milliseconds")
     parser.add_argument("--centralperiodms", type=float,
                 default='8000',help="top-level time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
@@ -153,11 +153,11 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--subclustersize", type=int,
-                default='4',help="number of nodes per subclusters")
+                default='8',help="number of nodes per subclusters")
     parser.add_argument("--lr", type=float,
-                default='2',help="learning rate")
+                default='4',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.1',help="unused power give up rate")
+                default='0.2',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port

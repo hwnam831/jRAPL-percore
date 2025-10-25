@@ -32,7 +32,7 @@ def print_b2p(folder_path):
         filename_parts = csv_file[:-4].split('_')
         csvparts = str.join(',',filename_parts)
         # [bigcluster, dps, 120, cnn-serving, high]
-        configname = filename_parts[0] + '-' + filename_parts[2]
+        configname = filename_parts[0][:-1] + '-' + filename_parts[2]
         policy = filename_parts[1]
         app = filename_parts[3]
 

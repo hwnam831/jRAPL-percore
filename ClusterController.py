@@ -144,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='8',help="learning rate")
+                default='4',help="learning rate")
     parser.add_argument("--alpha", type=float,
                 default='0.2',help="unused power give up rate")
     args=parser.parse_args()
