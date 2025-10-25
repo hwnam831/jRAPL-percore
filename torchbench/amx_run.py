@@ -69,7 +69,7 @@ if __name__=='__main__':
         arrivals = PoissonGen(1.5, args.duration, args.config)
         bsize = 8
     elif args.workload == 'high':
-        arrivals = PoissonGen(0.4, args.duration, args.config)
+        arrivals = PoissonGen(0.3, args.duration, args.config)
         bsize = 64
     else: # high
         arrivals = PoissonGen(0.4, args.duration, args.config)

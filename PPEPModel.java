@@ -138,10 +138,11 @@ public class PPEPModel {
                 float stalls = ctrs[7];
                 float branch_misses = ctrs[8];
                 float amx = ctrs[9];
-                float fp_arith = ctrs[10];
-                float uops = ctrs[11];
-                float adjusted_bips = bips + amx * 255 + fp_arith * 15;
-                float adjusted_ratio = adjusted_bips / bips;
+                float uops = ctrs[10];
+                float fp_arith = ctrs[11];
+                float amxratio = 15 * amx / bcps;
+                float adjusted_ratio = 1 + amxratio;
+                //System.out.println("Core " + (p*this.num_core+c) + ": util=" + util + ",bips = " + bips + ",amx = " + amx +", bcps=" + bcps + ", ratio=" + adjusted_ratio);
                 float mcpi = ldm_stalls/bips;
                 float cpi = bcps/bips;
                 float ccpi = cpi - mcpi;
@@ -166,12 +167,12 @@ public class PPEPModel {
 
                 //compute the gradients
                 float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
-                dBdf *= adjusted_ratio;
+                
                 float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
                 float dPdyndB = dyn_power/bips + active_coef_compiled * ((2/0.64f)*voltage + 1) * dVdB;
                 float dPidledB = (3*this.idle_coefs[0]*voltage*voltage + 2*this.idle_coefs[1]*voltage + this.idle_coefs[2]) * dVdB / this.num_core;
-                this.dBIPSdP[p] += 1/(dPdyndB + dPidledB)/this.num_core;
+                this.dBIPSdP[p] += adjusted_ratio/(dPdyndB + dPidledB)/this.num_core;
                 //this.dBIPSdP[p] += 1/dPdyndB;
                   
                 
