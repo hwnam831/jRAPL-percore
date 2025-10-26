@@ -122,7 +122,7 @@ def ControllerServer(periodms=1000, nsocket=2, subclustersize=2):
 
 power_max = 200
 power_min = 95
-grad_max = 5.0
+node_grad_max = 1.0
 alpha = 0.2
 min_freq = 1.0
 
@@ -143,9 +143,9 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='2000',help="sub-cluster time period in milliseconds")
+                default='1000',help="sub-cluster time period in milliseconds")
     parser.add_argument("--centralperiodms", type=float,
-                default='8000',help="top-level time period in milliseconds")
+                default='4000',help="top-level time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
@@ -155,9 +155,9 @@ if __name__ == '__main__':
     parser.add_argument("--subclustersize", type=int,
                 default='8',help="number of nodes per subclusters")
     parser.add_argument("--lr", type=float,
-                default='4',help="learning rate")
+                default='1',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.2',help="unused power give up rate")
+                default='0.5',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
@@ -215,7 +215,7 @@ if __name__ == '__main__':
                 
             sum_newpl = 0
             grad_sum=0
-            
+            grad_max = node_grad_max * len(subc)
             for c in subc:
                 grad_sum += sum([b2p_grads[c][s] for s in range(NSOC)])
                 

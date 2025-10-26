@@ -112,7 +112,7 @@ def ControllerServer(periodms=1000, nsocket=2):
 
 power_max = 200
 power_min = 100
-grad_max = 5.0
+node_grad_max = 1.0
 alpha = 0.1
 min_freq = 1.0
 
@@ -136,7 +136,7 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--limit", type=float,
                 default='360',help="cluster power limit")
     parser.add_argument("--periodms", type=float,
-                default='8000',help="time period in milliseconds")
+                default='4000',help="time period in milliseconds")
     parser.add_argument("--graceperiod", type=float,
                 default='10',help="grace period in seconds")
     parser.add_argument("--duration", type=float,
@@ -144,9 +144,9 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='4',help="learning rate")
+                default='1',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.2',help="unused power give up rate")
+                default='0.5',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
@@ -216,7 +216,7 @@ if __name__ == '__main__':
         if args.policy == "hierarchical":
             sum_newpl = 0
             grad_sum=0
-                
+            grad_max = node_grad_max * len(clients) * NSOC
             for c in clients:
                 grad_sum += b2p_grads[c][0] + b2p_grads[c][1]
                 
@@ -256,7 +256,7 @@ if __name__ == '__main__':
             
             sum_newpl = 0
             grad_sum=0
-            
+            grad_max = node_grad_max * len(clients) * NSOC
             for c in clients:
                 grad_sum += sum([b2p_grads[c][s] for s in range(NSOC)])
                 

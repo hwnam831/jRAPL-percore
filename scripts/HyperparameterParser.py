@@ -77,23 +77,27 @@ def print_b2p(folder_path):
         print(f"{csvparts}")
     appnames.sort()
     for confname in mydata:
-        with open('../'+confname + '-avg.csv', 'w') as file:
-            appstr = ",".join(appnames)
-            file.write(f"Policy,{appstr}\n")
-            policynames = list(mydata[confname].keys())
-            policynames.sort()
-            for policy in policynames:
-                avglatencies = ",".join([str(np.array(mydata[confname][policy][app]).mean()) for app in appnames])
-                file.write(f"{policy},{avglatencies}\n")
-        addGeomean('../'+confname + '-avg.csv')
-        with open('../'+confname + '-tail.csv', 'w') as file:
-            file.write(f"Policy,{appstr}\n")
-            policynames = list(mydata[confname].keys())
-            policynames.sort()
-            for policy in policynames:
-                taillatencies = ",".join([str(np.quantile(mydata[confname][policy][app],0.95)) for app in appnames])
-                file.write(f"{policy},{taillatencies}\n")
-        addGeomean('../'+confname + '-tail.csv')    
+        try:
+            with open('../'+confname + '-avg.csv', 'w') as file:
+                appstr = ",".join(appnames)
+                file.write(f"Policy,{appstr}\n")
+                policynames = list(mydata[confname].keys())
+                policynames.sort()
+                for policy in policynames:
+                    avglatencies = ",".join([str(np.array(mydata[confname][policy][app]).mean()) for app in appnames])
+                    file.write(f"{policy},{avglatencies}\n")
+            addGeomean('../'+confname + '-avg.csv')
+            with open('../'+confname + '-tail.csv', 'w') as file:
+                file.write(f"Policy,{appstr}\n")
+                policynames = list(mydata[confname].keys())
+                policynames.sort()
+                for policy in policynames:
+                    taillatencies = ",".join([str(np.quantile(mydata[confname][policy][app],0.95)) for app in appnames])
+                    file.write(f"{policy},{taillatencies}\n")
+            addGeomean('../'+confname + '-tail.csv') 
+        except:
+            pass
+           
 
 
 if __name__ == "__main__":
