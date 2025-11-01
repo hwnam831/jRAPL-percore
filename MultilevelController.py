@@ -29,7 +29,7 @@ def signal_handler(sig, frame):
     global serverRunning
     serverRunning = False
 
-def ControllerServer(periodms=1000, nsocket=2, subclustersize=2):
+def ControllerServer(periodms=500, nsocket=2, subclustersize=2):
 
     global nodeStatuses
     global clients
@@ -121,8 +121,8 @@ def ControllerServer(periodms=1000, nsocket=2, subclustersize=2):
     serverSocket.close()
 
 power_max = 200
-power_min = 95
-node_grad_max = 1.0
+power_min = 100
+node_grad_max = 2.0
 alpha = 0.2
 min_freq = 1.0
 
@@ -153,11 +153,11 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--subclustersize", type=int,
-                default='8',help="number of nodes per subclusters")
+                default='4',help="number of nodes per subclusters")
     parser.add_argument("--lr", type=float,
-                default='1',help="learning rate")
+                default='0.5',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.5',help="unused power give up rate")
+                default='0.3',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
@@ -215,11 +215,11 @@ if __name__ == '__main__':
                 
             sum_newpl = 0
             grad_sum=0
-            grad_max = node_grad_max * len(subc)
+            grad_max = node_grad_max * len(subc) * NSOC
             for c in subc:
                 grad_sum += sum([b2p_grads[c][s] for s in range(NSOC)])
                 
-            if grad_sum > grad_max * len(subc):
+            if grad_sum > grad_max:
                 lr = default_lr * grad_max * len(subc)/grad_sum 
             elif grad_sum < -grad_max:
                 lr = -default_lr * grad_max * len(subc)/grad_sum
@@ -258,6 +258,12 @@ if __name__ == '__main__':
                         break
                     for s in range(NSOC):
                         nodeStatuses[c]['Limit:'+str(s)] -= coefs[c][s]*remainder/eff_len
+            else:
+                delta = (subClusterlimit - sum_newpl)/len(subc)/NSOC
+                for c in subc:
+                    for s in range(NSOC):
+                        nodeStatuses[c]['Limit:'+str(s)] = nodeStatuses[c]['Limit:'+str(s)] + delta
+
         if time.time() > nextCentralTime:
             nextCentralTime = time.time() + args.centralperiodms/1000
             sum_newpl = 0

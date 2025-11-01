@@ -144,9 +144,9 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='1',help="learning rate")
+                default='0.5',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.5',help="unused power give up rate")
+                default='0.3',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
