@@ -13,7 +13,7 @@ def process_csv_files(file_pattern: str):
     """
     # Find all files matching the specified pattern
     csv_files = glob.glob(file_pattern)
-
+    csv_files.sort(reverse=True)
     if not csv_files:
         print(f"No files found matching the pattern: {file_pattern}")
         return
@@ -79,7 +79,7 @@ def process_csv_files(file_pattern: str):
 if __name__ == "__main__":
     # Define the pattern for the CSV files you want to process
     # This will match 'bigcluster1.csv', 'bigcluster_data.csv', etc.
-    file_pattern_to_process = 'bigcluster*.csv'
+    file_pattern_to_process = 'bigcluste*.csv'
     
     process_csv_files(file_pattern_to_process)
     

@@ -24,7 +24,7 @@ def print_b2p(folder_path):
     latencylists = {}
     # Process each CSV file
     for csv_file in csv_files:
-        
+        print(csv_file)
         # Read the CSV file
         df = pd.read_csv(csv_file)
         latencies = df['Elapsed']
@@ -50,7 +50,7 @@ def print_b2p(folder_path):
         for i in range(len(latencylist)):
             newlist += [latencylist[i]] * bsizelist[i]
         mydata[configname][policy][app] += newlist
-        print(f"{csvparts}")
+        #print(f"{csvparts}")
     appnames.sort()
     for confname in mydata:
         with open('../'+confname + '-avg.csv', 'w') as file:
