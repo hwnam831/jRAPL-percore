@@ -110,11 +110,11 @@ def ControllerServer(periodms=1000, nsocket=2):
     print("server stopped", file=sys.stderr)
     serverSocket.close()
 
-power_max = 200
+power_max = 180
 power_min = 100
 node_grad_max = 1.0
 alpha = 0.1
-min_freq = 1.0
+min_freq = 0.9
 
 def printcsv(starttime, NSOC=2):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -144,9 +144,9 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='0.5',help="learning rate")
+                default='0.3',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.3',help="unused power give up rate")
+                default='0.5',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
@@ -260,10 +260,10 @@ if __name__ == '__main__':
             for c in clients:
                 grad_sum += sum([b2p_grads[c][s] for s in range(NSOC)])
                 
-            if grad_sum > grad_max * len(clients):
-                lr = default_lr * grad_max * len(clients)/grad_sum 
+            if grad_sum > grad_max:
+                lr = default_lr * grad_max/grad_sum 
             elif grad_sum < -grad_max:
-                lr = -default_lr * grad_max * len(clients)/grad_sum
+                lr = -default_lr * grad_max/grad_sum
             else:
                 lr = default_lr
 

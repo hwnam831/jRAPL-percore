@@ -120,11 +120,11 @@ def ControllerServer(periodms=500, nsocket=2, subclustersize=2):
     print("server stopped", file=sys.stderr)
     serverSocket.close()
 
-power_max = 200
+power_max = 180
 power_min = 100
 node_grad_max = 2.0
 alpha = 0.2
-min_freq = 1.0
+min_freq = 0.9
 
 def printcsv(starttime, NSOC=2):
     csvlines=[str(int((time.time()-starttime)*1000))]
@@ -220,9 +220,9 @@ if __name__ == '__main__':
                 grad_sum += sum([b2p_grads[c][s] for s in range(NSOC)])
                 
             if grad_sum > grad_max:
-                lr = default_lr * grad_max * len(subc)/grad_sum 
+                lr = default_lr * grad_max /grad_sum 
             elif grad_sum < -grad_max:
-                lr = -default_lr * grad_max * len(subc)/grad_sum
+                lr = -default_lr * grad_max /grad_sum
             else:
                 lr = default_lr
 
