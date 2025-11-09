@@ -112,7 +112,7 @@ def ControllerServer(periodms=1000, nsocket=2):
 
 power_max = 180
 power_min = 100
-node_grad_max = 1.0
+node_grad_max = 2.0
 alpha = 0.1
 min_freq = 0.9
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument("--nsocket", type=int,
                 default='1',help="number of cpu sockets per node")
     parser.add_argument("--lr", type=float,
-                default='0.3',help="learning rate")
+                default='2.0',help="learning rate")
     parser.add_argument("--alpha", type=float,
                 default='0.5',help="unused power give up rate")
     args=parser.parse_args()

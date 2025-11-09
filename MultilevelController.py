@@ -155,9 +155,9 @@ if __name__ == '__main__':
     parser.add_argument("--subclustersize", type=int,
                 default='4',help="number of nodes per subclusters")
     parser.add_argument("--lr", type=float,
-                default='0.5',help="learning rate")
+                default='2.0',help="learning rate")
     parser.add_argument("--alpha", type=float,
-                default='0.3',help="unused power give up rate")
+                default='0.5',help="unused power give up rate")
     args=parser.parse_args()
     signal.signal(signal.SIGINT, signal_handler)
     # Set bind address and port
