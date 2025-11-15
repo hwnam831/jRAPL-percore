@@ -166,7 +166,7 @@ public class PPEPModel {
                 pkg_dyn_power += dyn_power;
 
                 //compute the gradients
-                float dBdf = (util * ccpi) / (cpi*cpi) + util*(1-util)/cpi;
+                float dBdf = (util * ccpi) / (cpi*cpi) - util*(1-util)/cpi;
                 
                 float dVdf = 2*this.vf_poly[0] * freq + this.vf_poly[1];
                 float dVdB = dVdf / dBdf;
